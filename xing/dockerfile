@@ -1,0 +1,66 @@
+# install java, python, and all dependencies for Xing feature extraction and modeling
+# https://github.com/dockerfile/java/blob/master/oracle-java8/Dockerfile
+# https://github.com/dockerfile/python/blob/master/Dockerfile
+# https://cran.rstudio.com/bin/linux/ubuntu/
+
+# Pull base image.
+FROM ubuntu:14.04
+
+# Install Java, Python, and base R
+RUN \
+  echo oracle-java8-installer shared/accepted-oracle-license-v1-1 select true | debconf-set-selections && \
+  apt-get update && \
+  apt-get install -y software-properties-common python-software-properties && \
+  add-apt-repository -y ppa:webupd8team/java && \
+  apt-get update && \
+  apt-get install -y oracle-java8-installer && \
+  rm -rf /var/lib/apt/lists/* && \
+  rm -rf /var/cache/oracle-jdk8-installer && \
+  apt-get update && \
+  apt-get -y install python3-dev python3-pip python-virtualenv && \ 
+  rm -rf /var/lib/apt/lists/* 
+
+# install Python libraries
+RUN pip3 install numpy pandas
+
+# https://www.digitalocean.com/community/tutorials/how-to-set-up-r-on-ubuntu-14-04
+RUN \
+  sh -c 'echo "deb http://cran.rstudio.com/bin/linux/ubuntu trusty/" >> /etc/apt/sources.list' && \
+  gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-key E084DAB9 && \
+  gpg -a --export E084DAB9 | apt-key add - && \
+  apt-get update && \
+  apt-get -y install r-base
+
+# Define commonly used JAVA_HOME variable
+ENV JAVA_HOME /usr/lib/jvm/java-8-oracle
+
+# install MySQL
+RUN echo "mysql-server-5.6 mysql-server/root_password password root" | sudo debconf-set-selections && \
+  echo "mysql-server-5.6 mysql-server/root_password_again password root" | sudo debconf-set-selections && \
+  apt-get -y install mysql-server-5.6
+
+# add configuration to mysql
+RUN echo "secure-file-priv = \"\"" >> /etc/mysql/conf.d/my5.6.cnf
+
+# install R packages
+RUN R CMD javareconf && \
+  R -e "install.packages(c('bindr', 'assertthat', 'bindrcpp', 'glue', 'magrittr', 'pkgconfig', 'rlang', 'R6', 'Rcpp', 'tibble', 'BH', 'plogr', 'getopt', 'digest', 'gtable', 'colorspace', 'lazyeval', 'plyr', 'stringi', 'RColorBrewer', 'dichromat', 'labeling', 'viridisLite'), repos = c('http://cran.rstudio.com/','http://cran.us.r-project.org'), dependencies = c('Depends'))" && \ 
+  R -e "install.packages(c('munsell'), repos = c('http://cran.rstudio.com/','http://cran.us.r-project.org'), dependencies = c('Depends'))" && \
+  R -e "install.packages(c('reshape2', 'scales', 'stringr'), repos = c('http://cran.rstudio.com/','http://cran.us.r-project.org'), dependencies = c('Depends'))" && \
+  R -e "install.packages(c('ggplot2'), repos = c('http://cran.rstudio.com/','http://cran.us.r-project.org'), dependencies = c('Depends'))" && \
+  R -e "install.packages(c('dplyr', 'optparse', 'rJava', 'RWekajars', 'RWeka', 'bnlearn', 'pROC'), repos = c('http://cran.rstudio.com/','http://cran.us.r-project.org'), dependencies = c('Depends'))"
+
+# add scripts
+ADD xing.py xing.py
+ADD feature_extraction feature_extraction
+ADD modeling modeling
+# start mysql
+RUN service mysql start
+
+# define entrypoint
+ENTRYPOINT ["python3", "controller.py"]
+
+
+
+
+
