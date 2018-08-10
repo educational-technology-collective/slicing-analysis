@@ -51,7 +51,7 @@ RUN R CMD javareconf && \
   R -e "install.packages(c('dplyr', 'optparse', 'rJava', 'RWekajars', 'RWeka', 'bnlearn', 'pROC'), repos = c('http://cran.rstudio.com/','http://cran.us.r-project.org'), dependencies = c('Depends'))"
 
 # add scripts
-ADD xing.py xing.py
+ADD controller.py controller.py
 ADD feature_extraction feature_extraction
 ADD modeling modeling
 # start mysql
