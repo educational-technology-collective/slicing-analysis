@@ -47,8 +47,9 @@ RUN R CMD javareconf && \
   R -e "install.packages(c('bindr', 'assertthat', 'bindrcpp', 'glue', 'magrittr', 'pkgconfig', 'rlang', 'R6', 'Rcpp', 'tibble', 'BH', 'plogr', 'getopt', 'digest', 'gtable', 'colorspace', 'lazyeval', 'plyr', 'stringi', 'RColorBrewer', 'dichromat', 'labeling', 'viridisLite'), repos = c('http://cran.rstudio.com/','http://cran.us.r-project.org'), dependencies = c('Depends'))" && \ 
   R -e "install.packages(c('munsell'), repos = c('http://cran.rstudio.com/','http://cran.us.r-project.org'), dependencies = c('Depends'))" && \
   R -e "install.packages(c('reshape2', 'scales', 'stringr'), repos = c('http://cran.rstudio.com/','http://cran.us.r-project.org'), dependencies = c('Depends'))" && \
+  R -e "install.packages(c('tibble', 'withr'), repos = c('http://cran.rstudio.com/','http://cran.us.r-project.org'), dependencies = c('Depends'))" && \
   R -e "install.packages(c('ggplot2'), repos = c('http://cran.rstudio.com/','http://cran.us.r-project.org'), dependencies = c('Depends'))" && \
-  R -e "install.packages(c('dplyr', 'optparse', 'rJava', 'RWekajars', 'RWeka', 'bnlearn', 'pROC'), repos = c('http://cran.rstudio.com/','http://cran.us.r-project.org'), dependencies = c('Depends'))"
+  R -e "install.packages(c('dplyr', 'optparse', 'rJava', 'RWekajars', 'RWeka', 'bnlearn'), repos = c('http://cran.rstudio.com/','http://cran.us.r-project.org'), dependencies = c('Depends'))"
 
 # add scripts
 ADD controller.py controller.py
