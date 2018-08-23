@@ -1,6 +1,9 @@
 # data directory
 data/
 
+# r system files
+*.Rhistory
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
