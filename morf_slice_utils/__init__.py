@@ -65,7 +65,7 @@ def clean_filename(src):
     :return: None
     """
     src_dir, src_file = os.path.split(src)
-    clean_src_file = re.sub('[\(\)\s&]', '', src_file)
+    clean_src_file = re.sub('[\(\)\s&]+', '', src_file)
     clean_src_path = os.path.join(src_dir, clean_src_file)
     try:
         os.rename(src, clean_src_path)
