@@ -18,9 +18,9 @@ RUN \
   echo "secure-file-priv = \"\"" >>  /etc/mysql/mysql.conf.d/mysqld.cnf
 
 # add scripts
-ADD create_user_lookup.py /
+ADD export_hash_mapping.py /
 ADD morf_slice_utils morf_slice_utils
 
 
 # define entrypoint
-ENTRYPOINT ["python3", "create_user_lookup.py"]
+ENTRYPOINT ["python3", "export_hash_mapping.py"]
