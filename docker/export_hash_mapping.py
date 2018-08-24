@@ -17,7 +17,6 @@ def main(course, session, output_dir="/output"):
 
 
 if __name__ == "__main__":
-    ## TODO: argparse here to get commands
     parser = argparse.ArgumentParser(description="execute feature extraction, training, or testing.")
     parser.add_argument("-c", "--course", required=True, help="an s3 pointer to a course")
     parser.add_argument("-r", "--session", required=False, help="3-digit course run number")
