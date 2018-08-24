@@ -36,11 +36,11 @@ for raw_data_bucket in job_config.raw_data_buckets:
                 cmd = make_docker_run_command(job_config.docker_exec, working_dir, OUTPUT_DIR, image_uuid, course=course, session=session, mode=None,
                                         client_args=None)
                 # run the docker image, make sure to pass params for course and session
-                import ipdb;ipdb.set_trace()
                 execute_and_log_output(cmd, logger)
+                import ipdb;ipdb.set_trace()
                 x=5
 
-# todo: concatenate into single file
+# todo: concatenate into single file in OUTPUT_DIR
 
 # todo: merge onto gender
 gender = pd.read_csv(GENDER_CSV_FP).drop_duplicates()
