@@ -1,6 +1,9 @@
 # data directory
 data/
 
+# notebook directory, used for experiment and data preprocessing notes
+notebook/
+
 # r system files
 *.Rhistory
 
