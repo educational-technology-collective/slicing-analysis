@@ -1,0 +1,26 @@
+# a basic dockerfile to run mySQL and simple python scripts
+
+# Pull base image.
+FROM ubuntu:16.04
+
+# install python and depends
+RUN \
+  apt-get update && \
+  apt-get install -y sudo software-properties-common python-software-properties && \
+  apt-get -y install python3-dev python3-pip python-virtualenv && \ 
+  rm -rf /var/lib/apt/lists/* && \
+# install MySQL and add configurations
+  echo "mysql-server-5.7 mysql-server/root_password password root" | sudo debconf-set-selections && \
+  echo "mysql-server-5.7 mysql-server/root_password_again password root" | sudo debconf-set-selections && \
+  sudo apt-get -y update && \
+  sudo apt-get -y dist-upgrade && \
+  apt-get -y install mysql-server-5.7 && \
+  echo "secure-file-priv = \"\"" >>  /etc/mysql/mysql.conf.d/mysqld.cnf
+
+# add scripts
+ADD create_user_lookup.py /
+ADD morf_slice_utils morf_slice_utils
+
+
+# define entrypoint
+ENTRYPOINT ["python3", "create_user_lookup.py"]
