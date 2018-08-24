@@ -1,5 +1,6 @@
-# private morf credentials
+# private morf credentials and logs
 config.properties
+logging/
 
 # ignore tar files (e.g. docker image)
 *.tar
