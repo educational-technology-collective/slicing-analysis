@@ -8,6 +8,8 @@ import os
 import subprocess
 import tarfile
 import shutil
+import gzip
+import re
 
 
 
@@ -105,10 +107,10 @@ def load_data(course, session, dbname = DATABASE_NAME, data_dir = "/input"):
     user = 'root'
     mysql_binary_location = '/usr/bin/mysql'
     mysql_admin_binary_location = '/usr/bin/mysqladmin'
-    session_dir = os.path.join(data_dir, course, session)
-    hash_mapping_sql_dump = [x for x in session_dir if 'hash_mapping' in x and session in x][0]
-    forum_sql_dump = [x for x in session_dir if 'anonymized_forum' in x and session in x][0]
-    anon_general_sql_dump = [x for x in session_dir if 'anonymized_general' in x and session in x][0]
+    session_input_dir = os.path.join(data_dir, course, session)
+    hash_mapping_sql_dump = [x for x in os.listdir(session_input_dir) if 'hash_mapping' in x and session in x][0]
+    forum_sql_dump = [x for x in os.listdir(session_input_dir) if 'anonymized_forum' in x and session in x][0]
+    anon_general_sql_dump = [x for x in os.listdir(session_input_dir) if 'anonymized_general' in x and session in x][0]
     # start mysql server
     subprocess.call('service mysql start', shell=True)
     # create a database
@@ -116,16 +118,25 @@ def load_data(course, session, dbname = DATABASE_NAME, data_dir = "/input"):
     res = subprocess.call('''mysql -u root -proot -e "CREATE DATABASE {}"'''.format(dbname), shell=True)
     print("RES: {}".format(res))
     # load all data dumps needed
-    load_dump(os.path.join(session_dir, forum_sql_dump))
-    load_dump(os.path.join(session_dir, hash_mapping_sql_dump))
-    load_dump(os.path.join(session_dir, anon_general_sql_dump))
+    load_dump(os.path.join(session_input_dir, forum_sql_dump))
+    load_dump(os.path.join(session_input_dir, hash_mapping_sql_dump))
+    load_dump(os.path.join(session_input_dir, anon_general_sql_dump))
     return
 
 
-unzip_sql_dumps(course, session, data_dir = "/input")
-# unzip all of the sql files and remove any parens from filename
+def unzip_sql_dumps(course, session, data_dir = "/input"):
+    """
+    unzip all of the sql files and remove any parens from filename.
+    :param course:
+    :param session:
+    :param data_dir:
+    :return:
+    """
+    session_input_dir = os.path.join(data_dir, course, session)
     for item in os.listdir(session_input_dir):
         if item.endswith(".sql.gz"):
             item_path = os.path.join(session_input_dir, item)
             unarchive_res = unarchive_file(item_path, session_input_dir)
             clean_filename(unarchive_res)
+    return
+
