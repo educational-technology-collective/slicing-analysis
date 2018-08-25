@@ -9,6 +9,7 @@ import logging
 import os
 import tempfile
 import re
+import pandas as pd
 
 GENDER_CSV_FP = os.path.join(os.getcwd(), "data/names_for_josh.csv")  # docker doesn't like relative file paths
 GENDER_VALUES_TO_KEEP = ("male", "female")
