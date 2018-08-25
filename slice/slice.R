@@ -26,7 +26,9 @@ user_course_df <- label_df %>%
     dplyr::mutate(gender = forcats::as_factor(gender))
 
 
-# for (course_name in unique(user_course_df$course)){    
+ss_list = list()
+for (course_name in unique(user_course_df$course)){ 
+    message(glue('processing course {course_name}'))
     course_df <- user_course_df %>%
         dplyr::filter(course == course_name) %>%
         tibble::column_to_rownames("userID") %>%
@@ -38,7 +40,8 @@ user_course_df <- label_df %>%
                                  majority_protected_attr_val = "male",
                                  image_dir = img_dir,
                                  course = course_name)
+    ss_list[[course_name]] <- ss
     #todo: store ss in some named list/array
-#} # end iteration over courses
+} # end iteration over courses
     
     
