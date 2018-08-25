@@ -51,13 +51,30 @@ interpolate_roc_fun <- function(perf_in, n_grid = 10000){
 ## majority_roc: list with attributes "x" and "y" defining points of roc curve
 ## minority_roc: list with attributes "x" and "y" defining points of roc curve
 slice_plot <- function(majority_roc, minority_roc) {
-    #stopifnot(length(majority_roc$x) == length(majority_roc$y) == length(minority_roc$x) == length(minority_roc$y))
-    plot(majority_roc$x, majority_roc$y, col = "orange", type = "l", lwd = 2, main = "Slice Plot")
-    # todo: use polygon instead of segments
-    segments(majority_roc$x, majority_roc$y, minority_roc$x, minority_roc$y)
-    lines(minority_roc$x, minority_roc$y, col = "blue", type = "l", lwd = 2)
+    # check that number of points are the same
+    stopifnot(length(majority_roc$x) == length(majority_roc$y), 
+              length(majority_roc$x) == length(minority_roc$x),
+              length(majority_roc$x) == length(minority_roc$y))
+    majority_col = "red"
+    minority_col = "blue"
+    plot(majority_roc$x, 
+         majority_roc$y, 
+         col = "red", 
+         type = "l", 
+         lwd = 1.5, 
+         main = "ROC Slice Plot",
+         xlab = "False Positive Rate", 
+         ylab = "True Positive Rate")
+    polygon(x = c(majority_roc$x, rev(minority_roc$x)), # reverse ordering used to close polygon by ending near start point
+            y = c(majority_roc$y, rev(minority_roc$y)),
+            col = "grey",
+            border = NA
+    )
+    lines(majority_roc$x, majority_roc$y, col = "red", type = "l", lwd = 1.5)
+    #segments(majority_roc$x, majority_roc$y, minority_roc$x, minority_roc$y)
+    lines(minority_roc$x, minority_roc$y, col = "blue", type = "l", lwd = 1.5)
+    # legend()
     # todo: legend here
-    
 }
 
 ## df: dataframe containing colnames matching pred_col, label_col, and protected_attr_col
