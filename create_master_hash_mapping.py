@@ -8,6 +8,7 @@ from morf.utils.log import set_logger_handlers, execute_and_log_output
 import logging
 import os
 import tempfile
+import re
 
 
 GENDER_CSV_FP = os.path.join(os.getcwd(), "data/names_for_josh.csv") # docker doesn't like relative file paths
@@ -39,8 +40,28 @@ for raw_data_bucket in job_config.raw_data_buckets:
                 # run the docker image, make sure to pass params for course and session
                 execute_and_log_output(cmd, logger)
 
-# todo: concatenate into single file in OUTPUT_DIR
+# concatenate into single file in OUTPUT_DIR
+df_list = []
+for f in os.listdir(OUTPUT_DIR):
+    if f.endswith(".csv") and not f.startswith("."): # only use csv files, ignore system files
+        print("[INFO] reading file {}".format(f))
+        # pull course name and session from filename
+        regex = re.compile("^hash_mapping_(\S+)_([0-9\-]+).*")
+        res = re.search(regex, f)
+        course = res.group(1)
+        session = res.group(2)
+        # read dataframe and add columns for course and session
+        df = pd.read_csv(os.path.join(OUTPUT_DIR, f))
+        df["course"] = course
+        df["session"] = session
+        df_list.append(df)
+hash_mapping_df = pd.concat(df_list)
+print("[INFO] hash mapping table contains {} rows".format(hash_mapping_df.shape[0]))
 
-# todo: merge onto gender
-gender = pd.read_csv(GENDER_CSV_FP).drop_duplicates()
-gender = gender.loc[gender['gender'].isin(GENDER_VALUES_TO_KEEP)]
+# read in gender
+gender_df = pd.read_csv(GENDER_CSV_FP).drop_duplicates()
+print("[INFO] original gender_df file contains {} rows".format(gender_df.shape[0]))
+gender_df = gender_df.loc[gender_df['gender'].isin(GENDER_VALUES_TO_KEEP)]
+print("[INFO] after dropping low-confidence gender guesses gender_df contains {} rows".format(gender_df.shape[0]))
+
+
