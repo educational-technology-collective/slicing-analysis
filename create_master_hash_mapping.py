@@ -3,7 +3,7 @@ A script to fetch the hash mapping data for each course session in MORF buckets 
 """
 from morf.utils.docker import load_docker_image, make_docker_run_command
 from morf.utils.config import MorfJobConfig
-from morf.utils import fetch_complete_courses, fetch_sessions, download_raw_course_data
+from morf.utils import fetch_complete_courses, fetch_sessions, fetch_raw_course_data
 from morf.utils.log import set_logger_handlers, execute_and_log_output
 import logging
 import os
@@ -30,8 +30,9 @@ for raw_data_bucket in job_config.raw_data_buckets:
             with tempfile.TemporaryDirectory(dir=os.getcwd()) as working_dir:
                 print("[INFO] processing course {} session {}".format(course, session))
                 # download the data exports
-                download_raw_course_data(job_config, raw_data_bucket, course=course, session=session, input_dir=working_dir,
-                                         data_dir=MORF_DATA_DIR[:-1]) # drop trailing slash on data dir
+                fetch_raw_course_data(job_config, raw_data_bucket, course, session, input_dir=working_dir)
+                # download_raw_course_data(job_config, raw_data_bucket, course=course, session=session, input_dir=working_dir,
+                #                          data_dir=MORF_DATA_DIR[:-1]) # drop trailing slash on data dir
                 # create docker run command and load image
                 image_uuid = load_docker_image(MYSQL_DOCKER_DIR, job_config, logger, image_name=MYSQL_DOCKER_IMG_NAME)
                 cmd = make_docker_run_command(job_config.docker_exec, working_dir, OUTPUT_DIR, image_uuid, course=course, session=session, mode=None,
