@@ -38,13 +38,35 @@ compute_roc <- function(preds, labs){
     return(perf)
 }
 
+## use interpolation to make approximate curve along n_grid equally-spaced values
+interpolate_roc_fun <- function(perf_in, n_grid = 10000){
+    x_vals = unlist(perf_in@x.values)
+    y_vals = unlist(perf_in@y.values)
+    stopifnot(length(x_vals) == length(y_vals))
+    roc_approx = approx(x_vals, y_vals, n = n_grid)
+    return(roc_approx)
+}
+
+## creates a plot of two roc curves w area between shaded
+## majority_roc: list with attributes "x" and "y" defining points of roc curve
+## minority_roc: list with attributes "x" and "y" defining points of roc curve
+slice_plot <- function(majority_roc, minority_roc) {
+    #stopifnot(length(majority_roc$x) == length(majority_roc$y) == length(minority_roc$x) == length(minority_roc$y))
+    plot(majority_roc$x, majority_roc$y, col = "orange", type = "l", lwd = 2, main = "Slice Plot")
+    # todo: use polygon instead of segments
+    segments(majority_roc$x, majority_roc$y, minority_roc$x, minority_roc$y)
+    lines(minority_roc$x, minority_roc$y, col = "blue", type = "l", lwd = 2)
+    # todo: legend here
+    
+}
+
 ## df: dataframe containing colnames matching pred_col, label_col, and protected_attr_col
 ## pred_col: name of column containing predicted probabilities
 ## label_col: name of column containing true labels (should be 0,1 only)
 ## protected_attr_col: name of column containing protected attr
 ## majority_protected_attr_val: name of "majority" group wrt protected attribute
 ## returns: value of slice statistic, absolute value of area between ROC curves for protected_attr_col
-compute_slice_statistic <- function(df, pred_col, label_col, protected_attr_col, majority_protected_attr_val){
+compute_slice_statistic <- function(df, pred_col, label_col, protected_attr_col, majority_protected_attr_val, n_grid = 10000, plot_slices = TRUE){
     # todo: input checking
         # pred_col should be in interval [0,1]
         # label_col should be strictly 0 or 1
@@ -60,9 +82,14 @@ compute_slice_statistic <- function(df, pred_col, label_col, protected_attr_col,
         roc_list[[protected_attr_val]] = compute_roc(protected_attr_df[,pred_col], protected_attr_df[,label_col])
     }
     # compare each non-majority class to majority class; accumulate absolute difference between ROC curves to slicing statistic
+    majority_roc_fun = interpolate_roc_fun(roc_list[[majority_protected_attr_val]])
     for (protected_attr_val in protected_attr_vals[protected_attr_vals != majority_protected_attr_val]){
-        
-    }
+        minority_roc_fun = interpolate_roc_fun(roc_list[[protected_attr_val]])
+        # todo: plot these or write to file
+        if (plot_slices == TRUE) {
+            slice_plot(majority_roc_fun, minority_roc_fun)
+        }
+        }
 }
 
 
