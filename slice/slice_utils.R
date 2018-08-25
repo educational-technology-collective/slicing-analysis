@@ -51,11 +51,12 @@ interpolate_roc_fun <- function(perf_in, n_grid = 10000){
 ## creates a plot of two roc curves w area between shaded
 ## majority_roc: list with attributes "x" and "y" defining points of roc curve
 ## minority_roc: list with attributes "x" and "y" defining points of roc curve
-slice_plot <- function(majority_roc, minority_roc, majority_group_name = NULL, minority_group_name = NULL) {
+slice_plot <- function(majority_roc, minority_roc, majority_group_name = NULL, minority_group_name = NULL, fout = NULL) {
     # check that number of points are the same
     stopifnot(length(majority_roc$x) == length(majority_roc$y), 
               length(majority_roc$x) == length(minority_roc$x),
               length(majority_roc$x) == length(minority_roc$y))
+    pdf(fout, width = 7, height = 7)
     # set some graph parameters
     majority_color = "red"
     minority_color = "blue"
@@ -86,6 +87,7 @@ slice_plot <- function(majority_roc, minority_roc, majority_group_name = NULL, m
     #segments(majority_roc$x, majority_roc$y, minority_roc$x, minority_roc$y)
     lines(minority_roc$x, minority_roc$y, col = minority_color, type = "l", lwd = 1.5)
     legend("bottomright", legend = c(majority_group_label, minority_group_label), col = c(majority_color, minority_color), lty = 1)
+    dev.off()
 }
 
 ## df: dataframe containing colnames matching pred_col, label_col, and protected_attr_col
@@ -93,8 +95,12 @@ slice_plot <- function(majority_roc, minority_roc, majority_group_name = NULL, m
 ## label_col: name of column containing true labels (should be 0,1 only)
 ## protected_attr_col: name of column containing protected attr
 ## majority_protected_attr_val: name of "majority" group wrt protected attribute
+## n_grid: number of grid points to use in approximation
+## plot_slices: if true, ROC slice plots are generated and saved
+## img_dir: directory to save images to
+## course: course name, used for filenames if plot_slices is set to TRUE
 ## returns: value of slice statistic, absolute value of area between ROC curves for protected_attr_col
-compute_slice_statistic <- function(df, pred_col, label_col, protected_attr_col, majority_protected_attr_val, n_grid = 10000, plot_slices = TRUE){
+compute_slice_statistic <- function(df, pred_col, label_col, protected_attr_col, majority_protected_attr_val, n_grid = 10000, plot_slices = TRUE, image_dir = NULL, course = NULL){
     # todo: input checking
         # pred_col should be in interval [0,1]
         # label_col should be strictly 0 or 1
@@ -121,7 +127,8 @@ compute_slice_statistic <- function(df, pred_col, label_col, protected_attr_col,
         ss <- ss + slice
         # todo: plot these or write to file
         if (plot_slices == TRUE) {
-            slice_plot(majority_roc_fun, minority_roc_fun, majority_protected_attr_val, protected_attr_val)
+            output_filename = file.path(image_dir, glue('slice_plot_{course}_{majority_protected_attr_val}_{protected_attr_val}.pdf'))
+            slice_plot(majority_roc_fun, minority_roc_fun, majority_protected_attr_val, protected_attr_val, fout = output_filename)
             }
     }
     return(ss)

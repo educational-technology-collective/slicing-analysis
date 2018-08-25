@@ -6,6 +6,7 @@ data_dir = "../data"
 pred_csv = "josh_gardner-dl-replication-week3-lstm-test.csv"
 label_csv = "labels-test-michigan.csv"
 protected_attr_csv = "hash-mapping-exports/coursera_user_hash_gender_lookup.csv"
+img_dir = "../img"
 
 #temporary; remove this later as script iterates over courses
 course_name = "pythonlearn"
@@ -30,7 +31,13 @@ user_course_df <- label_df %>%
         dplyr::filter(course == course_name) %>%
         tibble::column_to_rownames("userID") %>%
         select(c("prob", "label_value", "gender"))
-    ss = compute_slice_statistic(course_df, pred_col = "prob", label_col = "label_value", protected_attr_col = "gender",  majority_protected_attr_val = "male")
+    ss = compute_slice_statistic(course_df, 
+                                 pred_col = "prob", 
+                                 label_col = "label_value", 
+                                 protected_attr_col = "gender",  
+                                 majority_protected_attr_val = "male",
+                                 image_dir = img_dir,
+                                 course = course_name)
     #todo: store ss in some named list/array
 #} # end iteration over courses
     
