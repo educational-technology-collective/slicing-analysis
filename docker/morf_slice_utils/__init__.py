@@ -84,6 +84,7 @@ def execute_mysql_query_into_csv(query, file, database_name=DATABASE_NAME):
     mysql_to_csv_cmd = """ | tr '\t' ',' """  # string to properly format result of mysql query
     command = '''mysql -u root -proot {} -e"{}"'''.format(database_name, query)
     command += """{} > {}""".format(mysql_to_csv_cmd, file)
+    print("[INFO] executing {}".format(command))
     subprocess.call(command, shell=True)
     return
 
