@@ -8,7 +8,7 @@ label_csv = "labels-test-michigan.csv"
 protected_attr_csv = "hash-mapping-exports/coursera_user_hash_gender_lookup.csv"
 
 #temporary; remove this later as script iterates over courses
-course = "pythonlearn"
+course_name = "pythonlearn"
 
 #setwd(".")
 pred_df = read.csv(file.path(data_dir, pred_csv), stringsAsFactors = FALSE)
@@ -21,6 +21,17 @@ user_course_df <- label_df %>%
     dplyr::filter(label_type == "dropout") %>%
     dplyr::inner_join(pred_df) %>%
     dplyr::inner_join(protected_attr_df, by = c("userID" = "session_user_id", "course" = "course")) %>%
-    dplyr::select(c("userID", "course", "prob", "label_value", "gender"))
+    dplyr::select(c("userID", "course", "prob", "label_value", "gender")) %>%
+    dplyr::mutate(gender = forcats::as_factor(gender))
 
-# for (course in unique(user_course_df))    
+
+# for (course_name in unique(user_course_df$course)){    
+    course_df <- user_course_df %>%
+        dplyr::filter(course == course_name) %>%
+        tibble::column_to_rownames("userID") %>%
+        select(c("prob", "label_value", "gender"))
+    ss = compute_slice_statistic(course_df, pred_col = "prob", label_col = "label_value", protected_attr_col = "gender",  majority_protected_attr_val = "male")
+    #todo: store ss in some named list/array
+#} # end iteration over courses
+    
+    
