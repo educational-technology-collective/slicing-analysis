@@ -1,1 +1,3 @@
 basic docker environment to run mySQL inside a container and extract lookup table of coursera hash mappings from course data exports.
+
+IMPORTANT NOTE: the mySQL processes can fail **silently** if there are insufficient resources available to complete whatever task it is conducting. So, it would be best to configure your setup to allow Docker the maximum possible amount of resources in order to avoid this issue.
