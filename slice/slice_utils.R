@@ -2,6 +2,8 @@
 # in future, these functions should be directly incoroporated into auctestr package
 
 library(ROCR)
+library(magrittr)
+library(dplyr)
 
 ####################
 ##### BEGIN Example from ROCR documentation https://cran.r-project.org/web/packages/ROCR/ROCR.pdf
