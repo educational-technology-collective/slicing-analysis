@@ -28,6 +28,7 @@ for raw_data_bucket in job_config.raw_data_buckets:
         for session in fetch_sessions(job_config, raw_data_bucket, data_dir=MORF_DATA_DIR, course=course,
                                       fetch_all_sessions=True):
             with tempfile.TemporaryDirectory(dir=os.getcwd()) as working_dir:
+                print("[INFO] processing course {} session {}".format(course, session))
                 # download the data exports
                 download_raw_course_data(job_config, raw_data_bucket, course=course, session=session, input_dir=working_dir,
                                          data_dir=MORF_DATA_DIR[:-1]) # drop trailing slash on data dir
@@ -37,8 +38,6 @@ for raw_data_bucket in job_config.raw_data_buckets:
                                         client_args=None)
                 # run the docker image, make sure to pass params for course and session
                 execute_and_log_output(cmd, logger)
-                import ipdb;ipdb.set_trace()
-                x=5
 
 # todo: concatenate into single file in OUTPUT_DIR
 
