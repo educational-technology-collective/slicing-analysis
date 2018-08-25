@@ -4,6 +4,7 @@
 library(ROCR)
 library(magrittr)
 library(dplyr)
+library(glue)
 
 ####################
 ##### BEGIN Example from ROCR documentation https://cran.r-project.org/web/packages/ROCR/ROCR.pdf
@@ -50,19 +51,30 @@ interpolate_roc_fun <- function(perf_in, n_grid = 10000){
 ## creates a plot of two roc curves w area between shaded
 ## majority_roc: list with attributes "x" and "y" defining points of roc curve
 ## minority_roc: list with attributes "x" and "y" defining points of roc curve
-slice_plot <- function(majority_roc, minority_roc) {
+slice_plot <- function(majority_roc, minority_roc, majority_group_name = NULL, minority_group_name = NULL) {
     # check that number of points are the same
     stopifnot(length(majority_roc$x) == length(majority_roc$y), 
               length(majority_roc$x) == length(minority_roc$x),
               length(majority_roc$x) == length(minority_roc$y))
-    majority_col = "red"
-    minority_col = "blue"
+    # set some graph parameters
+    majority_color = "red"
+    minority_color = "blue"
+    majority_group_label = "Majority Group"
+    minority_group_label = "Minority Group"
+    plot_title = "ROC Slice Plot"
+    if (!is.null(majority_group_name)){
+        majority_group_label = glue("{majority_group_label} ({majority_group_name})")
+    }
+    if (!is.null(minority_group_name)){
+        minority_group_label = glue("{minority_group_label} ({minority_group_name})")
+    }
+    # add labels, if given
     plot(majority_roc$x, 
          majority_roc$y, 
-         col = "red", 
+         col = majority_color, 
          type = "l", 
          lwd = 1.5, 
-         main = "ROC Slice Plot",
+         main = plot_title,
          xlab = "False Positive Rate", 
          ylab = "True Positive Rate")
     polygon(x = c(majority_roc$x, rev(minority_roc$x)), # reverse ordering used to close polygon by ending near start point
@@ -70,11 +82,10 @@ slice_plot <- function(majority_roc, minority_roc) {
             col = "grey",
             border = NA
     )
-    lines(majority_roc$x, majority_roc$y, col = "red", type = "l", lwd = 1.5)
+    lines(majority_roc$x, majority_roc$y, col = majority_color, type = "l", lwd = 1.5)
     #segments(majority_roc$x, majority_roc$y, minority_roc$x, minority_roc$y)
-    lines(minority_roc$x, minority_roc$y, col = "blue", type = "l", lwd = 1.5)
-    # legend()
-    # todo: legend here
+    lines(minority_roc$x, minority_roc$y, col = minority_color, type = "l", lwd = 1.5)
+    legend("bottomright", legend = c(majority_group_label, minority_group_label), col = c(majority_color, minority_color), lty = 1)
 }
 
 ## df: dataframe containing colnames matching pred_col, label_col, and protected_attr_col
@@ -110,7 +121,7 @@ compute_slice_statistic <- function(df, pred_col, label_col, protected_attr_col,
         ss <- ss + slice
         # todo: plot these or write to file
         if (plot_slices == TRUE) {
-            slice_plot(majority_roc_fun, minority_roc_fun)
+            slice_plot(majority_roc_fun, minority_roc_fun, majority_protected_attr_val, protected_attr_val)
             }
     }
     return(ss)
