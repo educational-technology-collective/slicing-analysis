@@ -1,0 +1,238 @@
+---
+title: "test"
+author: "Joshua Gardner"
+date: "January 12, 2017"
+output: html_document
+---
+```{r}
+library(dplyr)
+library(magrittr)
+# function to build single concatenated dataset for same week of all runs of a given course
+aggregate_dataset <- function(course_shortname, run_numbers, course_week, feature_types = c('appended', 'only', 'sum'), data_dir = '../proc_data') {
+    #check input
+    if (class(course_shortname) != 'character') print('Course name must be character.')
+    if (!(class(run_numbers) == 'numeric')) print('Run numbers must be numeric vector.')
+    if (!(class(course_week) == 'numeric')|length(course_week) != 1) print('Course week must be single numeric value.')
+    # initialize output list of all feature types
+    df_list_out = list()
+    for (feature_type in feature_types) {
+        if (!(feature_type %in% c('appended', 'only', 'sum'))) print('Feature type must be one of: appended, week_only, sum')
+        #initialize output data frame
+        df_out = data.frame()
+        # fetch data for each week
+        for (i in run_numbers) {
+            run_dir = paste0(data_dir, '/', course_shortname, '/', '00', i)
+            dropout_fp = paste0(run_dir, '/', 'user_dropout_weeks.csv')
+            dropout_wk_df = read.csv(dropout_fp)
+            feat_fp = paste0(run_dir, '/', 'week_', course_week, '/', 'week_', course_week, '_', feature_type, '_feats.csv')
+            feat_df = read.csv(feat_fp)
+            feat_dropout_df = inner_join(dropout_wk_df, feat_df)
+            feat_dropout_df$dropout_current_week = factor(feat_dropout_df$dropout_current_week)
+            df_out = rbind(df_out, feat_dropout_df)
+        }
+        # drop any zero-variance columns
+        zero_var_cols <- unlist(lapply(df_out, function(x) 0 == var(if (is.factor(x)) as.integer(x) else x)))
+        df_out_nonzerovar = df_out[,!zero_var_cols]
+        # drop students who dropped out in previous weeks; this means they have shown at least one full week of inactivity immediately prior to this week
+        df_out_nonzerovar %<>% filter(dropout_week > course_week-1)
+        # add dataframe with all runs of this feature type to output list
+        df_list_out[[feature_type]] = df_out_nonzerovar
+    }
+# return list, containing one dataframe for each of the three feature types (appended, week_only, sum)
+return(df_list_out)
+}
+
+```
+
+```{r}
+# load data for target week for each course
+target_week = 3
+thermo = aggregate_dataset('thermo', c(2,3,4,5,6), target_week)
+imhpe = aggregate_dataset('imhpe', c(2,3,4,5,6), target_week)
+fsf = aggregate_dataset('fsf', c(2,3,4,5,6,7,8,9), target_week)
+i_f = aggregate_dataset('if', c(2,4,5,6,7,8,9), target_week)
+iti = aggregate_dataset('iti', c(3,4,5,6,7), target_week)
+# create single data list of all datasets
+dl = list('thermo' = thermo, 'imhpe' = imhpe, 'fsf' = fsf, 'i_f' = i_f, 'iti' = iti)
+
+# make sure to clarify in paper: dropout_current_week actually signifies whether this is the last week the user shows any activity; it might be more accurate to say 'final_active_week'. We aren't 'peeking' at the data that is determining the label; that is actually the following week. (So, someone who dropped out in week 3 showed no activity in WEEK 4.)
+
+# TODO: decide whether to drop inactive students; 
+# also could use a holdout run, or just drop anyone who dropped out in previous weeks and explain that this would be trained on previous runs of a course
+
+```
+
+```{r}
+
+library(dplyr)
+library(tidyr)
+library(tibble)
+library(performanceEstimation)
+library(e1071) # needed for naiveBayes, SVM classifiers
+library(randomForest) # needed for randomForest classifier
+library(rpart) # needed for rpart method
+library(penalized) # penalized GLM with function penaliz
+# load these libraries; cluster = TRUE setting in performanceEstimation() fails without it.
+library(parallel)
+library(parallelMap)
+
+
+# define workflow for glm model
+lassoGLM <- function(form,train,test,...) {
+  require(glmnet,quietly=TRUE)
+  # create matrix from training data
+  myTrain = as.matrix(train[,!names(train) %in% c("dropout_current_week")])
+  myY = train$dropout_current_week
+  ## now obtain the model; lasso
+  myModel <- glmnet(myTrain, myY, alpha = 1, lambda = 0, family = "binomial")
+  ## get training df without labels
+  myTest = as.matrix(test[,!names(test) %in% c("dropout_current_week")])
+  ## obtain the predictions; predict dropout at threshold of 0.5
+  myPreds <- ifelse(predict(myModel,myTest, type="response")>0.5, 1, 0)
+  ## finally produce the list containing the output of the workflow
+  res <- list(trues=as.numeric(test$dropout_current_week)-1,preds=as.vector(myPreds))
+  return(res)
+}
+```
+
+```{r}
+ft = 'sum'
+
+drop_cols = c('userID', 'dropout_week', 'week')
+       # build proc_data; this drops specified columns and assembles datasets into a new list
+        proc_data = list()
+        for (i in 1:length(dl)) {
+            course = names(dl)[i]
+            mdf = dl[[course]][[ft]]
+            mdf = mdf[,!(names(mdf) %in% drop_cols)]
+            proc_data[[i]] = mdf
+        }
+x =  performanceEstimation(
+                                c(PredTask(dropout_current_week ~ ., proc_data[[1]]), 
+                                  PredTask(dropout_current_week ~ ., proc_data[[2]]), 
+                                  PredTask(dropout_current_week ~ ., proc_data[[3]]),  
+                                  PredTask(dropout_current_week ~ ., proc_data[[4]]), 
+                                  PredTask(dropout_current_week ~ ., proc_data[[5]]) 
+                                  ),
+                                c(
+                                Workflow('lassoGLM'),
+                                  # Deprecated glm -- invalid predictions; potential solution might involve setting predictor.pars in Workflow.
+                                  # Workflow(learner = "glm", learner.pars=list(family="binomial", control=glm.control(maxit=1000))), 
+                                  Workflow(learner="svm",learner.pars=list(cost=1,gamma=0.1)),
+                                  Workflow(learner = "naiveBayes"),
+                                  Workflow(learner = "rpart", predictor.pars=list(type="class")),
+                                  Workflow(learner="randomForest",learner.pars=list(ntree=c(500)))
+                                  ), 
+                                EstimationTask(metrics=c("acc", "err"), method = CV(nFolds = 10)),
+                                # , # TODO: try separately with metrics = "F"; generated error when using both "acc" and "F".
+                                cluster = TRUE
+                              )
+x_pc = pairedComparisons(x, maxs=c(TRUE, FALSE), p.value=0.05)
+# write output to csvs
+write.csv(x_pc[['acc']][['avgScores']], file = paste0(ft, '_avg_scores.csv'))
+write.csv(x_pc[['acc']][['rks']], file = paste0(ft, '_ranks.csv'))
+write.csv(x_pc[['acc']][['avgRksWFs']], file = paste0(ft, '_avg_ranks.csv'))
+CDdiagram.Nemenyi(x_pc, metric = "acc")
+
+# save to pdf and png
+pdf(paste0(ft, '_cd_diagram_nemenyi.pdf'), paper ='a4r', width = 5.5, height = 3.4)
+CDdiagram.Nemenyi(x_pc, metric = "acc")
+dev.off()
+png(paste0(ft, '_cd_diagram_nemenyi.png'), width =5.5, height = 3.4, units = 'in', res = 100)
+CDdiagram.Nemenyi(x_pc, metric = "acc")
+dev.off()
+```
+
+```{r}
+ft = 'appended'
+
+drop_cols = c('userID', 'dropout_week', 'week')
+       # build proc_data; this drops specified columns and assembles datasets into a new list
+        proc_data = list()
+        for (i in 1:length(dl)) {
+            course = names(dl)[i]
+            mdf = dl[[course]][[ft]]
+            mdf = mdf[,!(names(mdf) %in% drop_cols)]
+            proc_data[[i]] = mdf
+        }
+y =  performanceEstimation(
+                                c(PredTask(dropout_current_week ~ ., proc_data[[1]]), 
+                                  PredTask(dropout_current_week ~ ., proc_data[[2]]), 
+                                  PredTask(dropout_current_week ~ ., proc_data[[3]]),  
+                                  PredTask(dropout_current_week ~ ., proc_data[[4]]), 
+                                  PredTask(dropout_current_week ~ ., proc_data[[5]]) 
+                                  ),
+                                c(
+                                Workflow('lassoGLM'),
+                                  # Deprecated glm -- invalid predictions; potential solution might involve setting predictor.pars in Workflow.
+                                  # Workflow(learner = "glm", learner.pars=list(family="binomial", control=glm.control(maxit=1000))), 
+                                  Workflow(learner="svm",learner.pars=list(cost=1,gamma=0.1)),
+                                  Workflow(learner = "naiveBayes"),
+                                  Workflow(learner = "rpart", predictor.pars=list(type="class")),
+                                  Workflow(learner="randomForest",learner.pars=list(ntree=c(500)))
+                                  ), 
+                                EstimationTask(metrics=c("acc", "err"), method = CV(nFolds = 10)),
+                                # , # TODO: try separately with metrics = "F"; generated error when using both "acc" and "F".
+                                cluster = TRUE
+                              )
+y_pc = pairedComparisons(y, maxs=c(TRUE, FALSE), p.value=0.05)
+# write output to csvs
+write.csv(y_pc[['acc']][['avgScores']], file = paste0(ft, '_avg_scores.csv'))
+write.csv(y_pc[['acc']][['rks']], file = paste0(ft, '_ranks.csv'))
+write.csv(y_pc[['acc']][['avgRksWFs']], file = paste0(ft, '_avg_ranks.csv'))
+CDdiagram.Nemenyi(y_pc, metric = "acc")
+# save to pdf and png
+pdf(paste0(ft, '_cd_diagram_nemenyi.pdf'), paper ='a4r', width = 5.5, height = 3.4)
+CDdiagram.Nemenyi(y_pc, metric = "acc")
+dev.off()
+png(paste0(ft, '_cd_diagram_nemenyi.png'), width =5.5, height = 3.4, units = 'in', res = 100)
+CDdiagram.Nemenyi(y_pc, metric = "acc")
+dev.off()
+```
+
+```{r}
+ft = 'only'
+
+drop_cols = c('userID', 'dropout_week', 'week')
+       # build proc_data; this drops specified columns and assembles datasets into a new list
+        proc_data = list()
+        for (i in 1:length(dl)) {
+            course = names(dl)[i]
+            mdf = dl[[course]][[ft]]
+            mdf = mdf[,!(names(mdf) %in% drop_cols)]
+            proc_data[[i]] = mdf
+        }
+z =  performanceEstimation(
+                                c(PredTask(dropout_current_week ~ ., proc_data[[1]]), 
+                                  PredTask(dropout_current_week ~ ., proc_data[[2]]), 
+                                  PredTask(dropout_current_week ~ ., proc_data[[3]]),  
+                                  PredTask(dropout_current_week ~ ., proc_data[[4]]), 
+                                  PredTask(dropout_current_week ~ ., proc_data[[5]]) 
+                                  ),
+                                c(
+                                Workflow('lassoGLM'),
+                                  # Deprecated glm -- invalid predictions; potential solution might involve setting predictor.pars in Workflow.
+                                  # Workflow(learner = "glm", learner.pars=list(family="binomial", control=glm.control(maxit=1000))), 
+                                  Workflow(learner="svm",learner.pars=list(cost=1,gamma=0.1)),
+                                  Workflow(learner = "naiveBayes"),
+                                  Workflow(learner = "rpart", predictor.pars=list(type="class")),
+                                  Workflow(learner="randomForest",learner.pars=list(ntree=c(500)))
+                                  ), 
+                                EstimationTask(metrics=c("acc", "err"), method = CV(nFolds = 10)),
+                                # , # TODO: try separately with metrics = "F"; generated error when using both "acc" and "F".
+                                cluster = TRUE
+                              )
+z_pc = pairedComparisons(z, maxs=c(TRUE, FALSE), p.value=0.05)
+# write output to csv
+write.csv(z_pc[['acc']][['avgScores']], file = paste0(ft, '_avg_scores.csv'))
+write.csv(z_pc[['acc']][['rks']], file = paste0(ft, '_ranks.csv'))
+write.csv(z_pc[['acc']][['avgRksWFs']], file = paste0(ft, '_avg_ranks.csv'))
+CDdiagram.Nemenyi(z_pc, metric = "acc")
+# save to pdf and png
+pdf(paste0(ft, '_cd_diagram_nemenyi.pdf'), paper ='a4r', width = 5.5, height = 3.4)
+CDdiagram.Nemenyi(z_pc, metric = "acc")
+dev.off()
+png(paste0(ft, '_cd_diagram_nemenyi.png'), width =5.5, height = 3.4, units = 'in', res = 100)
+CDdiagram.Nemenyi(z_pc, metric = "acc")
+dev.off()
+```
