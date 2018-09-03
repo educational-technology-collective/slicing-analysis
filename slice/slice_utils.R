@@ -100,7 +100,7 @@ compute_slice_statistic <- function(df, pred_col, label_col, protected_attr_col,
         stopifnot(identical(majority_roc_fun$x, minority_roc_fun$x))
         f1 <- approxfun(majority_roc_fun$x, majority_roc_fun$y - minority_roc_fun$y)     # piecewise linear function
         f2 <- function(x) abs(f1(x))                 # take the positive value
-        slice = integrate(f2, 0, 1)$value
+        slice = integrate(f2, 0, 1, subdivisions = 10000L)$value # increased subdivisions from default 100L because non-convergence was occasionally reached when evaluating some integrals
         ss <- ss + slice
         # todo: plot these or write to file
         if (plot_slices == TRUE) {
