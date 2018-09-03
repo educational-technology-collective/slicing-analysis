@@ -1,0 +1,5 @@
+*.tar
+*.pyc
+.git
+.cache
+*.git
