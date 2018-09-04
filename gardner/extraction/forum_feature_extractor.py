@@ -97,7 +97,7 @@ def gen_sentiment_feats(df):
     :return: pd.DataFrame of 'session_user_id', 'week', post_net_sentiment, and net_sentiment_diff_from_thread_avg. Note that users who do not post should have NaNs, not zeros.
     """
     import nltk
-    nltk.download('vader_lexicon')
+    # nltk.download('vader_lexicon')
     from nltk.sentiment.vader import SentimentIntensityAnalyzer
     sid = SentimentIntensityAnalyzer()
     # compute post net sentiment and initialize df_out
