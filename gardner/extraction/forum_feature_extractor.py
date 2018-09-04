@@ -33,8 +33,8 @@ python3 forum_feature_extractor.py -i raw_data/thermo/ -d coursera_course_dates.
 import argparse, datetime, re, os
 import pandas as pd
 import numpy as np
-from extraction_utils import course_len, timestamp_week, fetch_start_end_date
-from quiz_feature_extractor import fetch_course_runs, get_users_and_weeks, gen_user_week_df, generate_appended_csv
+from extraction.extraction_utils import course_len, timestamp_week, fetch_start_end_date
+from extraction.quiz_feature_extractor import fetch_course_runs, get_users_and_weeks, gen_user_week_df, generate_appended_csv
 # from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from textstat.textstat import textstat
 import nltk
