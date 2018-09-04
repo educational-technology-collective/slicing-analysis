@@ -35,7 +35,7 @@ import argparse, datetime, re, os
 import pandas as pd
 import numpy as np
 import itertools
-from extraction_utils import course_len, timestamp_week, fetch_start_end_date
+from extraction.extraction_utils import course_len, timestamp_week, fetch_start_end_date
 
 MILLISECONDS_IN_SECOND = 1000
 MILLISECONDS_IN_DAY = 86400000
