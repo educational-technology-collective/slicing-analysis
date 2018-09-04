@@ -1,3 +1,7 @@
+"""
+Main script to replicate "best" model from Gardner and Brooks (2018)
+"""
+
 import argparse
 import subprocess
 
@@ -9,6 +13,8 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     if args.mode == "extract":
+        from extraction.extract_features import main as extract_features
+        extract_features(args.course, args.session)
         subprocess.call("python3 extraction/extract_features.py", shell=True)
     elif args.mode == "train":
         subprocess.call("python3 modeling/build_models.py", shell=True)
