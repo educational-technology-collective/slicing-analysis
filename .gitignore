@@ -2,6 +2,12 @@
 config.properties
 logging/
 
+# ignore temp directory, used for testing
+temp
+
+# pycharm files
+*.idea
+
 # ignore tar files (e.g. docker image)
 *.tar
 
