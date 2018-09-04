@@ -2,6 +2,9 @@
 config.properties
 logging/
 
+# pycharm files
+*.idea
+
 # ignore tar files (e.g. docker image)
 *.tar
 
