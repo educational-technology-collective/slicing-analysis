@@ -2,11 +2,12 @@
 Utility script to extract clickstream, forum, and assignment features
 """
 
-from sql_utils import initialize_sql_db, load_sql_dumps, extract_forum_text_csv_from_sql, extract_quiz_csv_from_sql
+from extraction.sql_utils import initialize_sql_db, load_sql_dumps, extract_forum_text_csv_from_sql, extract_quiz_csv_from_sql
 import argparse
-from forum_feature_extractor import main as extract_forum_feats
-from quiz_feature_extractor import main as extract_quiz_feats
-from clickstream_feature_extractor import main as extract_clickstream_feats
+from extraction.forum_feature_extractor import main as extract_forum_feats
+from extraction.quiz_feature_extractor import main as extract_quiz_feats
+from extraction.clickstream_feature_extractor import main as extract_clickstream_feats
+
 
 def main(course_id, run_number):
     extract_clickstream_feats(course_id, run_number)
