@@ -1,5 +1,6 @@
 import argparse, math, datetime, os, bisect
 import pandas as pd
+from functools import reduce
 
 MILLISECONDS_IN_SECOND = 1000
 
@@ -47,3 +48,51 @@ def timestamp_week(timestamp, course_start, course_end):
     if week_number >= 0 and week_number <= n_weeks:
         return week_number
     return None
+
+
+def aggregate_and_remove_feature_files(input_dir, result_dir="/output", result_filename = "feats.csv", match_substring=None, drop_cols = ["dropout_current_week", "week"]):
+    """
+    Read in all feature files in input_dir, merge them, and write the results to result_dir, removing the files after merging.
+    :param input_dir: directory containing feature files to be merged
+    :param result_dir: directory to write results in
+    :param result_filename: name of file to write in result_dir
+    :param match_substring: optional, only match files containg this substring
+    :return:
+    """
+    result_fp = os.path.join(result_dir, result_filename)
+    df_list = []
+    # append all feature files to list
+    for dirpath, _, filenames in os.walk(input_dir):
+        for f in filenames:
+            fp = os.path.join(dirpath, f)
+            if (not match_substring) or (match_substring in f):
+                # read the file and remove it
+                df = pd.read_csv(fp, dtype=object)
+                df_list.append(df)
+                # os.remove(fp)
+    # TODO: merge feature files here
+    # rename columns as necessary, from https://stackoverflow.com/questions/37221147/how-do-i-apply-transformations-to-list-of-pandas-dataframes
+    for i in range(len(df_list)):
+        # drop columns in drop_cols
+        temp = df_list[i].rename(columns={"session_user_id": "userID"})
+        temp.drop(drop_cols, axis=1, inplace=True, errors="ignore")
+        df_list[i] = temp
+    df_out = reduce(lambda df1, df2: df1.merge(df2, on="userID"), df_list)
+    # check to ensure number of columns/users has not changed via merging
+    assert(all(df.shape[0] == df_out.shape[0] for df in df_list))
+    # remove any additional files in result_dir
+    for dirpath, _, filenames in os.walk(output_dir):
+        for f in filenames:
+            try:
+                fp = os.path.join(dirpath, f)
+                os.remove(fp)
+            except Exception as e:
+                print("[INFO] exception when attempting to remove file {}: {}".format(fp, e))
+    # todo: write results to file
+    df_out.to_csv(result_fp, index=False)
+
+
+
+
+
+
