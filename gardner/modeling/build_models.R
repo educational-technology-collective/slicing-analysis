@@ -25,4 +25,5 @@ mt = opt$model_type
 setwd(working_dir)
 source("modeling_utils.R")
 mod = build_models(course, session, working_dir, model_type = mt)
-#todo: save mod to file
+# save mod to file
+save(mod, file = file.path(output_dir, "model.Rdata"))
