@@ -2,36 +2,19 @@
 library(dplyr)
 library(caret)
 
-WEEK=2
+WEEK=2 #todo: verify this is correct week number
 
 ## read in dataframe and drop non-active students (those who have shown >=1 week of inactivity prior to target week)
-## param ft: feature type; one of {"clickstream", "forum", "quiz", "all"}
 ## para id_col_ix: positional index of id column; since naming can be inconsistent in feature extraction this is (re)set manually when reading in data.
-read_data <- function(dir, week, ft, dropout_file = "user_dropout_weeks.csv", id_col_ix = 1, id_col_name = "session_user_id", drop_cols = c("week", "dropout_current_week")){
-    dropout_df = read.csv(paste(dir, dropout_file, sep = "/"))
+read_data <- function(dir, week, dropout_file = "/input/labels.csv", id_col_ix = 1, id_col_name = "userID", drop_cols = c("week", "dropout_current_week")){
+    dropout_df = read.csv(file.path(dir, dropout_file))
     names(dropout_df)[id_col_ix] <- id_col_name
     all_feat_types = c("clickstream", "forum", "quiz")
-    if (ft != "all"){
-        # read individual feature df
-        feat_filename = paste0("week_", week, "_", ft, "_appended_feats.csv")
-        feat_fp = paste(dir, feat_filename, sep = "/")
-        feat_df = read.csv(feat_fp)
-        names(feat_df)[id_col_ix] <- id_col_name
-    }
-    if (ft == "all"){
-        feat_df_list = list()
-        for (ix in seq_along(all_feat_types)){ # read each feature type and add to feat_df_list
-            ft = all_feat_types[ix]
-            # read individual feature df
-            feat_filename = paste0("week_", week, "_", ft, "_appended_feats.csv")
-            feat_fp = paste(dir, feat_filename, sep = "/")
-            feat_df = read.csv(feat_fp)
-            names(feat_df)[id_col_ix] <- id_col_name
-            feat_df_list[[ix]] = feat_df
-        }
-        # merge all dataframes; https://stackoverflow.com/questions/8091303/simultaneously-merge-multiple-data-frames-in-a-list
-        feat_df = feat_df_list %>% Reduce(function(dtf1,dtf2) left_join(dtf1,dtf2,by="session_user_id"), .)
-    }
+    # read feature df
+    feat_filename = paste0("week_", week, "_", ft, "_appended_feats.csv")
+    feat_fp = file.path(dir, feat_filename)
+    feat_df = read.csv(feat_fp)
+    names(feat_df)[id_col_ix] <- id_col_name
     # join with dropout_df to get labels; 
     active_feat_df = inner_join(feat_df, dropout_df, by = id_col_name) 
     # set row names and drop any unneeded column; this includes dropping "dropout_current_week" so that label can be generated and dropping "week" column
@@ -39,6 +22,7 @@ read_data <- function(dir, week, ft, dropout_file = "user_dropout_weeks.csv", id
     suppressWarnings(active_feat_df <- dplyr::select(active_feat_df, -one_of(c(id_col_name, drop_cols)))) # suppress warnings about column names not in data
     # drop any students who have shown >=1 week of inactivity prior to this week
     active_feat_df = filter(active_feat_df, dropout_week > week - 1)
+    #todo: arent we only predicting final dropout in MORF? different task...and no need to create this label if so
     active_feat_df$dropout_current_week = factor(active_feat_df$dropout_week == week, labels = "dropout")
     # drop dropout_week column
     active_feat_df = dplyr::select(active_feat_df, -one_of("dropout_week"))
@@ -107,7 +91,7 @@ build_models <- function(course, session, data_dir, model_type = NULL){
     fitControl <- trainControl(method = "repeatedcv", number = 2, repeats = 5, summaryFunction=twoClassSummary, classProbs=T, savePredictions = T, returnResamp = "all", seeds =  seed_list)
 
     # read data and drop near-zero variance columns; this creates a common baseline dataset for each method
-    data = read_data(data_dir, WEEK, feat_type) #todo: fix this; no feat_type variable
+    data = read_data(data_dir, WEEK)
     mod_data = data[,-caret::nearZeroVar(data, freqCut = 1000/1, uniqueCut = 2)]
     zero_var_mod_data = data[,-caret::checkConditionalX(data[,-ncol(data)], data[,ncol(data)])]
     # build model
