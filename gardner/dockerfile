@@ -31,7 +31,8 @@ RUN apt-get update && \
   echo "secure-file-priv = \"\"" >> /etc/mysql/conf.d/my5.6.cnf
   
 # install vader lexicon for sentiment analysis
-RUN python3 -c 'import nltk;nltk.download("vader_lexicon")'
+RUN python3 -c 'import nltk;nltk.download("vader_lexicon")' && \
+  python3 -c 'import nltk;nltk.download("punkt")'
 
 # add scripts
 ADD extraction extraction
