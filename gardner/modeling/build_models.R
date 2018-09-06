@@ -23,6 +23,6 @@ output_dir = opt$output_dir
 mt = opt$model_type
 
 setwd(working_dir)
-# source("install_packages.R")
 source("modeling_utils.R")
-build_models(course, session, working_dir, output_dir, model_type = mt)
+mod = build_models(course, session, working_dir, model_type = mt)
+#todo: save mod to file
