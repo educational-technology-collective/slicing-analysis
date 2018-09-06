@@ -120,8 +120,6 @@ build_models <- function(course, session, data_dir, output_dir, model_type = c("
             missing_data_message(course, session, feat_type, model_type)
             mod = NULL
         }
-        #TODO: update all other calls to write_resample_df to have correct parameters in correct order as below
-        write_resample_df(mod, model_type, c("alpha", "lambda"), glmGrid, feat_type, course, session, output_dir)
     }
     if (model_type == "svmLinear2"){ # linear svm; need to do some feature selection
         svmGrid = expand.grid(cost = 10^c(1, 0, -1, -2, -3))
@@ -133,7 +131,6 @@ build_models <- function(course, session, data_dir, output_dir, model_type = c("
             missing_data_message(course, session, feat_type, model_type)
             mod = NULL
         }
-        write_resample_df(mod, model_type, c("cost"), svmGrid, feat_type, course, session, output_dir)
     }
     if (model_type == "rpart"){ # simple classification tree; don't use C4.5/J48 because these require java.
         # https://stackoverflow.com/questions/31138751/roc-curve-from-training-data-in-caret to plot AUC
@@ -145,7 +142,6 @@ build_models <- function(course, session, data_dir, output_dir, model_type = c("
             missing_data_message(course, session, feat_type, model_type)
             mod = NULL
         }
-        write_resample_df(mod, model_type, c("cp"), rpartGrid, feat_type, course, session, output_dir)
     }
     if (model_type == "adaboost"){ # adaboost; chose not to use random forest because tuning the mtry parameter across datasets with highly-varying numbers of predictors was not practical
         adaGrid = expand.grid(nIter = c(50, 100, 500), method = c("Adaboost.M1", "Real adaboost"))
@@ -156,7 +152,6 @@ build_models <- function(course, session, data_dir, output_dir, model_type = c("
             missing_data_message(course, session, feat_type, model_type)
             mod = NULL
         }
-        write_resample_df(mod, model_type, c("nIter", "method"), adaGrid, feat_type, course, session, output_dir)
     }
     if (model_type == "nb"){ # naive bayes; remove any predictors with empty conditional distributions within each level of outcome variable
         nbGrid = expand.grid(fL = c(0,1), usekernel = c(T,F), adjust = c(1)) # note that only the laplacian smoothing parameter and use of kernel is tuned; adjust is set to default value.
@@ -168,6 +163,5 @@ build_models <- function(course, session, data_dir, output_dir, model_type = c("
             missing_data_message(course, session, feat_type, model_type)
             mod = NULL
         }
-        write_resample_df(mod, model_type, c("fL", "usekernel", "adjust"), nbGrid, feat_type, course, session, output_dir)
     }
 }
