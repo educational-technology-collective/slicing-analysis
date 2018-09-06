@@ -9,7 +9,7 @@ RUN \
   rm -rf /var/lib/apt/lists/* 
 
 # install Python libraries
-RUN pip3 install numpy pandas nltk vaderSentiment textstat
+RUN pip3 install numpy pandas nltk vaderSentiment textstat twython
 
 
 # install r and dependencies
