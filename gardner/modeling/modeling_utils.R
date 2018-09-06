@@ -98,7 +98,7 @@ missing_data_message <- function(course, session, ft, mt){
 }
 
 ## train model(s) of model_type and dump fold-level results to output_dir
-build_models <- function(course, session, data_dir, output_dir, model_type = c("glmnet", "svmLinear2", "rpart", "adaboost", "nb")){
+build_models <- function(course, session, data_dir, model_type = NULL){
     # create seeds; need to be a list of length 11 with 10 integer vectors of size 6 and the last list element having at least a single integer
     d <- seq(from=5000, to=5061)
     max <- 6
@@ -164,4 +164,5 @@ build_models <- function(course, session, data_dir, output_dir, model_type = c("
             mod = NULL
         }
     }
+    return(mod)
 }
