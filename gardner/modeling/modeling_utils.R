@@ -98,80 +98,76 @@ missing_data_message <- function(course, session, ft, mt){
 }
 
 ## train model(s) of model_type and dump fold-level results to output_dir
-build_models <- function(course, session, data_dir, output_dir, model_types = c("glmnet", "svmLinear2", "rpart", "adaboost", "nb"), feat_types = c("clickstream", "forum", "quiz", "all")){
+build_models <- function(course, session, data_dir, output_dir, model_type = c("glmnet", "svmLinear2", "rpart", "adaboost", "nb")){
     # create seeds; need to be a list of length 11 with 10 integer vectors of size 6 and the last list element having at least a single integer
     d <- seq(from=5000, to=5061)
     max <- 6
     x <- seq_along(d)
     seed_list = split(d, ceiling(x/max))
     fitControl <- trainControl(method = "repeatedcv", number = 2, repeats = 5, summaryFunction=twoClassSummary, classProbs=T, savePredictions = T, returnResamp = "all", seeds =  seed_list)
-    # iterate over each feature type
-    for (feat_type in feat_types){
-        # read data and drop near-zero variance columns; this creates a common baseline dataset for each method
-        data = read_data(data_dir, WEEK, feat_type)
-        mod_data = data[,-caret::nearZeroVar(data, freqCut = 1000/1, uniqueCut = 2)]
-        zero_var_mod_data = data[,-caret::checkConditionalX(data[,-ncol(data)], data[,ncol(data)])]
-        # within feature type, iterate over each model type
-        for (model_type in model_types){
-            if (model_type == "glmnet"){ # penalized logistic regression
-                glmGrid = expand.grid(alpha=0, lambda = c(10^c(0, -1, -2, -3), 0))
-                model_training_message(course, session, feat_type, model_type)
-                if (is.data.frame(mod_data)){
-                    mod = caret::train(dropout_current_week ~ ., data = mod_data, method = model_type, metric = "ROC", trControl = fitControl, tuneGrid = glmGrid)
-                } else{
-                    missing_data_message(course, session, feat_type, model_type)
-                    mod = NULL
-                }
-                #TODO: update all other calls to write_resample_df to have correct parameters in correct order as below
-                write_resample_df(mod, model_type, c("alpha", "lambda"), glmGrid, feat_type, course, session, output_dir)
-            }
-            if (model_type == "svmLinear2"){ # linear svm; need to do some feature selection
-                svmGrid = expand.grid(cost = 10^c(1, 0, -1, -2, -3))
-                model_training_message(course, session, feat_type, model_type)
-                library(doMC);registerDoMC()
-                if (is.data.frame(mod_data)){
-                    mod = caret::train(dropout_current_week ~ ., data = zero_var_mod_data, method = model_type, metric = "ROC", trControl = fitControl, tuneGrid = svmGrid, preProc = c("center", "scale"))
-                } else{
-                    missing_data_message(course, session, feat_type, model_type)
-                    mod = NULL
-                }
-                write_resample_df(mod, model_type, c("cost"), svmGrid, feat_type, course, session, output_dir)
-            }
-            if (model_type == "rpart"){ # simple classification tree; don't use C4.5/J48 because these require java.
-                # https://stackoverflow.com/questions/31138751/roc-curve-from-training-data-in-caret to plot AUC
-                rpartGrid = expand.grid(cp = c(0.001, 0.01, 0.1, 1))
-                model_training_message(course, session, feat_type, model_type)
-                if (is.data.frame(mod_data)){
-                    mod = caret::train(dropout_current_week ~ ., data = mod_data, method = model_type, metric = "ROC", trControl = fitControl, tuneGrid = rpartGrid)
-                } else{
-                    missing_data_message(course, session, feat_type, model_type)
-                    mod = NULL
-                }
-                write_resample_df(mod, model_type, c("cp"), rpartGrid, feat_type, course, session, output_dir)
-            }
-            if (model_type == "adaboost"){ # adaboost; chose not to use random forest because tuning the mtry parameter across datasets with highly-varying numbers of predictors was not practical
-                adaGrid = expand.grid(nIter = c(50, 100, 500), method = c("Adaboost.M1", "Real adaboost"))
-                model_training_message(course, session, feat_type, model_type)
-                if (is.data.frame(mod_data)){
-                    mod = caret::train(dropout_current_week ~ ., data = mod_data, method = model_type, metric = "ROC", trControl = fitControl, tuneGrid = adaGrid)
-                } else {
-                    missing_data_message(course, session, feat_type, model_type)
-                    mod = NULL
-                }
-                write_resample_df(mod, model_type, c("nIter", "method"), adaGrid, feat_type, course, session, output_dir)
-            }
-            if (model_type == "nb"){ # naive bayes; remove any predictors with empty conditional distributions within each level of outcome variable
-                nbGrid = expand.grid(fL = c(0,1), usekernel = c(T,F), adjust = c(1)) # note that only the laplacian smoothing parameter and use of kernel is tuned; adjust is set to default value.
-                model_training_message(course, session, feat_type, model_type)
-                if (is.data.frame(mod_data)){
-                    mod = caret::train(dropout_current_week ~ ., data = zero_var_mod_data, method = "nb", metric = "ROC", trControl = fitControl, tuneGrid = nbGrid)
-                }
-                else{
-                    missing_data_message(course, session, feat_type, model_type)
-                    mod = NULL
-                }
-                write_resample_df(mod, model_type, c("fL", "usekernel", "adjust"), nbGrid, feat_type, course, session, output_dir)
-            }
+
+    # read data and drop near-zero variance columns; this creates a common baseline dataset for each method
+    data = read_data(data_dir, WEEK, feat_type) #todo: fix this; no feat_type variable
+    mod_data = data[,-caret::nearZeroVar(data, freqCut = 1000/1, uniqueCut = 2)]
+    zero_var_mod_data = data[,-caret::checkConditionalX(data[,-ncol(data)], data[,ncol(data)])]
+    # build model
+    if (model_type == "glmnet"){ # penalized logistic regression
+        glmGrid = expand.grid(alpha=0, lambda = c(10^c(0, -1, -2, -3), 0))
+        model_training_message(course, session, feat_type, model_type)
+        if (is.data.frame(mod_data)){
+            mod = caret::train(dropout_current_week ~ ., data = mod_data, method = model_type, metric = "ROC", trControl = fitControl, tuneGrid = glmGrid)
+        } else{
+            missing_data_message(course, session, feat_type, model_type)
+            mod = NULL
         }
+        #TODO: update all other calls to write_resample_df to have correct parameters in correct order as below
+        write_resample_df(mod, model_type, c("alpha", "lambda"), glmGrid, feat_type, course, session, output_dir)
+    }
+    if (model_type == "svmLinear2"){ # linear svm; need to do some feature selection
+        svmGrid = expand.grid(cost = 10^c(1, 0, -1, -2, -3))
+        model_training_message(course, session, feat_type, model_type)
+        library(doMC);registerDoMC()
+        if (is.data.frame(mod_data)){
+            mod = caret::train(dropout_current_week ~ ., data = zero_var_mod_data, method = model_type, metric = "ROC", trControl = fitControl, tuneGrid = svmGrid, preProc = c("center", "scale"))
+        } else{
+            missing_data_message(course, session, feat_type, model_type)
+            mod = NULL
+        }
+        write_resample_df(mod, model_type, c("cost"), svmGrid, feat_type, course, session, output_dir)
+    }
+    if (model_type == "rpart"){ # simple classification tree; don't use C4.5/J48 because these require java.
+        # https://stackoverflow.com/questions/31138751/roc-curve-from-training-data-in-caret to plot AUC
+        rpartGrid = expand.grid(cp = c(0.001, 0.01, 0.1, 1))
+        model_training_message(course, session, feat_type, model_type)
+        if (is.data.frame(mod_data)){
+            mod = caret::train(dropout_current_week ~ ., data = mod_data, method = model_type, metric = "ROC", trControl = fitControl, tuneGrid = rpartGrid)
+        } else{
+            missing_data_message(course, session, feat_type, model_type)
+            mod = NULL
+        }
+        write_resample_df(mod, model_type, c("cp"), rpartGrid, feat_type, course, session, output_dir)
+    }
+    if (model_type == "adaboost"){ # adaboost; chose not to use random forest because tuning the mtry parameter across datasets with highly-varying numbers of predictors was not practical
+        adaGrid = expand.grid(nIter = c(50, 100, 500), method = c("Adaboost.M1", "Real adaboost"))
+        model_training_message(course, session, feat_type, model_type)
+        if (is.data.frame(mod_data)){
+            mod = caret::train(dropout_current_week ~ ., data = mod_data, method = model_type, metric = "ROC", trControl = fitControl, tuneGrid = adaGrid)
+        } else {
+            missing_data_message(course, session, feat_type, model_type)
+            mod = NULL
+        }
+        write_resample_df(mod, model_type, c("nIter", "method"), adaGrid, feat_type, course, session, output_dir)
+    }
+    if (model_type == "nb"){ # naive bayes; remove any predictors with empty conditional distributions within each level of outcome variable
+        nbGrid = expand.grid(fL = c(0,1), usekernel = c(T,F), adjust = c(1)) # note that only the laplacian smoothing parameter and use of kernel is tuned; adjust is set to default value.
+        model_training_message(course, session, feat_type, model_type)
+        if (is.data.frame(mod_data)){
+            mod = caret::train(dropout_current_week ~ ., data = zero_var_mod_data, method = "nb", metric = "ROC", trControl = fitControl, tuneGrid = nbGrid)
+        }
+        else{
+            missing_data_message(course, session, feat_type, model_type)
+            mod = NULL
+        }
+        write_resample_df(mod, model_type, c("fL", "usekernel", "adjust"), nbGrid, feat_type, course, session, output_dir)
     }
 }
