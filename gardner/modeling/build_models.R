@@ -20,9 +20,9 @@ course = opt$course
 session = opt$session
 working_dir = opt$working_dir
 output_dir = opt$output_dir
-model_type = opt$model_type
+mt = opt$model_type
 
 setwd(working_dir)
 # source("install_packages.R")
 source("modeling_utils.R")
-build_models(course, session, working_dir, output_dir, model_types = model_type)
+build_models(course, session, working_dir, output_dir, model_type = mt)
