@@ -8,7 +8,9 @@ option_list = list(
     make_option(c("-w", "--working_dir"), type="character", default=NULL,
                 help="current working dir", metavar="character"),
     make_option(c("-o", "--output_dir"), type="character", default=NULL,
-                help="output dir", metavar="character")
+                help="output dir", metavar="character"),
+    make_option(c("-m", "--model_type"), type="character", default=NULL,
+                help="model type", metavar="character")
 )
 
 opt_parser = OptionParser(option_list=option_list)
@@ -18,8 +20,9 @@ course = opt$course
 session = opt$session
 working_dir = opt$working_dir
 output_dir = opt$output_dir
+model_type = opt$model_type
 
 setwd(working_dir)
 # source("install_packages.R")
 source("modeling_utils.R")
-build_models(course, session, working_dir, output_dir)
+build_models(course, session, working_dir, output_dir, model_types = model_type)
