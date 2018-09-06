@@ -16,7 +16,9 @@ if __name__ == "__main__":
         from extraction.extract_features import main as extract_features
         extract_features(args.course, args.session)
     elif args.mode == "train":
-        subprocess.call("python3 modeling/build_models.py", shell=True)
+        cmd = "Rscript build_models.R --course {} --session {}".format(args.course, args.session)
+        subprocess.call(cmd, shell=True)
+        # todo: archive results and shift somewhere if needed
     elif args.mode == "test":
         #todo
         pass
