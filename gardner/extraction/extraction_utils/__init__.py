@@ -59,6 +59,8 @@ def aggregate_and_remove_feature_files(input_dir, result_dir="/output", result_f
     :param match_substring: optional, only match files containg this substring
     :return:
     """
+    user_id_colname = "userID" # key column used for joining
+    session_user_id_colname = "session_user_id" # another name for userid which will be renamed to user_id_colname
     result_fp = os.path.join(result_dir, result_filename)
     df_list = []
     # append all feature files to list
@@ -66,21 +68,24 @@ def aggregate_and_remove_feature_files(input_dir, result_dir="/output", result_f
         for f in filenames:
             fp = os.path.join(dirpath, f)
             if (not match_substring) or (match_substring in f):
-                # read the file and remove it
-                df = pd.read_csv(fp, dtype=object)
-                df_list.append(df)
-                # os.remove(fp)
-    # TODO: merge feature files here
+                try:
+                    # read the file and remove it
+                    df = pd.read_csv(fp, dtype=object)
+                    df_list.append(df)
+                    os.remove(fp)
+                except Exception as e:
+                    print("[ERROR] {}".format(e))
     # rename columns as necessary, from https://stackoverflow.com/questions/37221147/how-do-i-apply-transformations-to-list-of-pandas-dataframes
     for i in range(len(df_list)):
         # drop columns in drop_cols
-        temp = df_list[i].rename(columns={"session_user_id": "userID"})
+        temp = df_list[i].rename(columns={session_user_id_colname: user_id_colname})
         temp.drop(drop_cols, axis=1, inplace=True, errors="ignore")
         df_list[i] = temp
-    df_out = reduce(lambda df1, df2: df1.merge(df2, on="userID"), df_list)
+    # merge dataframes on userID
+    df_out = reduce(lambda df1, df2: df1.merge(df2, on=user_id_colname), df_list)
     # check to ensure number of columns/users has not changed via merging
     assert(all(df.shape[0] == df_out.shape[0] for df in df_list))
-    # remove any additional files in result_dir
+    # remove any additional files in output_dir
     for dirpath, _, filenames in os.walk(output_dir):
         for f in filenames:
             try:
@@ -88,7 +93,7 @@ def aggregate_and_remove_feature_files(input_dir, result_dir="/output", result_f
                 os.remove(fp)
             except Exception as e:
                 print("[INFO] exception when attempting to remove file {}: {}".format(fp, e))
-    # todo: write results to file
+    # write results to file in output_dir
     df_out.to_csv(result_fp, index=False)
 
 
