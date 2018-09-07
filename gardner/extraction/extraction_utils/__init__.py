@@ -52,16 +52,16 @@ def timestamp_week(timestamp, course_start, course_end):
 
 def aggregate_and_remove_feature_files(input_dir, output_dir="/output", result_filename = "feats.csv", match_substring=None, drop_cols = ["dropout_current_week", "week"]):
     """
-    Read in all feature files in input_dir, merge them, and write the results to result_dir, removing the files after merging.
+    Read in all feature files in input_dir, merge them, and write the results to output_dir, removing the files after merging.
     :param input_dir: directory containing feature files to be merged
-    :param result_dir: directory to write results in
-    :param result_filename: name of file to write in result_dir
+    :param output_dir: directory to write results in
+    :param result_filename: name of file to write in output_dir
     :param match_substring: optional, only match files containg this substring
     :return:
     """
     user_id_colname = "userID" # key column used for joining
     session_user_id_colname = "session_user_id" # another name for userid which will be renamed to user_id_colname
-    result_fp = os.path.join(result_dir, result_filename)
+    result_fp = os.path.join(output_dir, result_filename)
     df_list = []
     # append all feature files to list
     for dirpath, _, filenames in os.walk(input_dir):
