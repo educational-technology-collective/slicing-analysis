@@ -50,7 +50,7 @@ def timestamp_week(timestamp, course_start, course_end):
     return None
 
 
-def aggregate_and_remove_feature_files(input_dir, result_dir="/output", result_filename = "feats.csv", match_substring=None, drop_cols = ["dropout_current_week", "week"]):
+def aggregate_and_remove_feature_files(input_dir, output_dir="/output", result_filename = "feats.csv", match_substring=None, drop_cols = ["dropout_current_week", "week"]):
     """
     Read in all feature files in input_dir, merge them, and write the results to result_dir, removing the files after merging.
     :param input_dir: directory containing feature files to be merged
