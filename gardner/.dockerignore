@@ -5,4 +5,6 @@
 *.git
 client.config
 config.properties
-
+README.md
+analysis
+analysis-utils
