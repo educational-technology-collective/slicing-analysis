@@ -3,3 +3,6 @@
 .git
 .cache
 *.git
+client.config
+config.properties
+
