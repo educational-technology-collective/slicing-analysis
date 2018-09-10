@@ -22,7 +22,7 @@ if __name__ == "__main__":
         extract_features(args.course, args.session)
         aggregate_and_remove_feature_files(input_dir="/output", match_substring="feats")
     elif args.mode == "train":
-        cmd = "Rscript modeling/build_models.R --course {} --session {} --working_dir /input --output_dir /output --model_type {}".format(args.course, args.session, args.model_type)
+        cmd = "Rscript modeling/build_models.R --course {} --working_dir /input --output_dir /output --model_type {}".format(args.course, args.model_type)
         subprocess.call(cmd, shell=True)
         # todo: archive results and shift somewhere if needed
     elif args.mode == "test":
