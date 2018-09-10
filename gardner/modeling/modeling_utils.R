@@ -51,43 +51,13 @@ initialize_blank_resample_df <- function(model_type, n_reps = 5, n_folds = 2, da
     return(df)
 }
 
-
-# writes resampled results to csv file, making a unique identifier column by concatenating model parameters and tune_params into a model_id column.
-## resample_df: dataframe returned as the $resample attribute of a caret::train object when the fitControl parameter returnResample = "all".
-## tune_params: name of columns which are turning parameters; together these should make a unique identifier for each model.
-## model_name: a short name for the model; ideally, use the $method attribute of the caret::train object.
-## ft: feature type used.
-write_resample_df <- function(mod, model_name, tune_params, tune_grid, ft, course, session, out_dir = "/Users/joshgardner/Documents/UM-Graduate/UMSI/LED_Lab/jla-model-eval/experiment-results-data"){
-    if (!(is.null(mod))){
-        resample_df = mod$resample
-    } else{
-        resample_df = initialize_blank_resample_df()
-        resample_df = merge(resample_df, tune_grid, by=NULL)
-    }
-    resample_df$model = model_name
-    resample_df$feat_type = ft
-    resample_df$course = course
-    resample_df$session = session
-    # this is a hack but it works; puts underscore separation between multiple params
-    resample_df$fill = "_"
-    temp = sapply(tune_params, function(x) c(x, "fill"), simplify = "vector")
-    tune_params_filled = as.vector(matrix(temp, nrow = 1))
-    resample_df$model_id <- do.call(paste0, resample_df[c("model", "fill", tune_params_filled, "feat_type")])
-    resample_df = dplyr::select(resample_df, -one_of(c("fill")))
-    out_file = paste(course, session, model_name, ft, "results.csv", sep = "_")
-    out_path = paste(out_dir, out_file, sep = "/")
-    message(paste0("[INFO] writing ", out_path))
-    write.csv(resample_df, file = out_path, row.names = F)
-}
-
-
-model_training_message <- function(course, session, ft, mt){
-    msg = paste("[INFO] training", mt, "model for course", course, "session", session, "feature type", ft, sep = " ")
+model_training_message <- function(course, session, mt){
+    msg = paste("[INFO] training", mt, "model for course", course, "session", session, sep = " ")
     message(msg)
 }
 
-missing_data_message <- function(course, session, ft, mt){
-    msg = paste("[WARNING] no valid model data for course", course, "session", session, "feature type", ft, "model type", mt, sep = " ")
+missing_data_message <- function(course, session, mt){
+    msg = paste("[WARNING] no valid model data for course", course, "session", session, "model type", mt, sep = " ")
     message(msg)
 }
 
@@ -107,54 +77,54 @@ build_models <- function(course, data_dir, model_type = NULL){
     # build model
     if (model_type == "glmnet"){ # penalized logistic regression
         glmGrid = expand.grid(alpha=0, lambda = c(10^c(0, -1, -2, -3), 0))
-        model_training_message(course, session, feat_type, model_type)
+        model_training_message(course, session, model_type)
         if (is.data.frame(mod_data)){
             mod = caret::train(dropout_current_week ~ ., data = mod_data, method = model_type, metric = "ROC", trControl = fitControl, tuneGrid = glmGrid)
         } else{
-            missing_data_message(course, session, feat_type, model_type)
+            missing_data_message(course, session, model_type)
             mod = NULL
         }
     }
     if (model_type == "svmLinear2"){ # linear svm; need to do some feature selection
         svmGrid = expand.grid(cost = 10^c(1, 0, -1, -2, -3))
-        model_training_message(course, session, feat_type, model_type)
+        model_training_message(course, session, model_type)
         library(doMC);registerDoMC()
         if (is.data.frame(mod_data)){
             mod = caret::train(dropout_current_week ~ ., data = zero_var_mod_data, method = model_type, metric = "ROC", trControl = fitControl, tuneGrid = svmGrid, preProc = c("center", "scale"))
         } else{
-            missing_data_message(course, session, feat_type, model_type)
+            missing_data_message(course, session, model_type)
             mod = NULL
         }
     }
     if (model_type == "rpart"){ # simple classification tree; don't use C4.5/J48 because these require java.
         # https://stackoverflow.com/questions/31138751/roc-curve-from-training-data-in-caret to plot AUC
         rpartGrid = expand.grid(cp = c(0.001, 0.01, 0.1, 1))
-        model_training_message(course, session, feat_type, model_type)
+        model_training_message(course, session, model_type)
         if (is.data.frame(mod_data)){
             mod = caret::train(dropout_current_week ~ ., data = mod_data, method = model_type, metric = "ROC", trControl = fitControl, tuneGrid = rpartGrid)
         } else{
-            missing_data_message(course, session, feat_type, model_type)
+            missing_data_message(course, session, model_type)
             mod = NULL
         }
     }
     if (model_type == "adaboost"){ # adaboost; chose not to use random forest because tuning the mtry parameter across datasets with highly-varying numbers of predictors was not practical
         adaGrid = expand.grid(nIter = c(50, 100, 500), method = c("Adaboost.M1", "Real adaboost"))
-        model_training_message(course, session, feat_type, model_type)
+        model_training_message(course, session, model_type)
         if (is.data.frame(mod_data)){
             mod = caret::train(dropout_current_week ~ ., data = mod_data, method = model_type, metric = "ROC", trControl = fitControl, tuneGrid = adaGrid)
         } else {
-            missing_data_message(course, session, feat_type, model_type)
+            missing_data_message(course, session, model_type)
             mod = NULL
         }
     }
     if (model_type == "nb"){ # naive bayes; remove any predictors with empty conditional distributions within each level of outcome variable
         nbGrid = expand.grid(fL = c(0,1), usekernel = c(T,F), adjust = c(1)) # note that only the laplacian smoothing parameter and use of kernel is tuned; adjust is set to default value.
-        model_training_message(course, session, feat_type, model_type)
+        model_training_message(course, session, model_type)
         if (is.data.frame(mod_data)){
             mod = caret::train(dropout_current_week ~ ., data = zero_var_mod_data, method = "nb", metric = "ROC", trControl = fitControl, tuneGrid = nbGrid)
         }
         else{
-            missing_data_message(course, session, feat_type, model_type)
+            missing_data_message(course, session, model_type)
             mod = NULL
         }
     }
