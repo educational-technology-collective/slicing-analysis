@@ -16,17 +16,27 @@ read_session_data <- function(course, session, input_dir = "/input", label_csv_s
     label_fp = file.path(course_session_dir, label_filename)
     feature_df = read.csv(feature_fp)
     label_df = read.csv(label_fp)
-    # join with dropout_df to get labels; 
+    # join with dropout_df to get labels; set user_id_col to rowname
     feature_label_df = inner_join(feature_df, label_df, by = id_col_name)
-    suppressWarnings(feature_label_df <- dplyr::select(feature_label_df, -one_of(c(id_col_name, drop_cols)))) # suppress warnings about column names not in data
+    message("[INFO] setting userID to row name and dropping userID column...")
     feature_label_df %<>%
         dplyr::mutate(label_value = factor(label_value)) %>%
-        dplyr::rename(label = label_value)
+        dplyr::rename(label = label_value) %>%
+        tibble::column_to_rownames(var = "userID") %>%
+        dplyr::select(-one_of(c(id_col_name, drop_cols)))
     return(feature_label_df)
 }
 
-read_course_data <- function() {
+read_course_data <- function(course, input_dir = "/input") {
     # todo: iteratively call read_session_data; concatenate and return results
+    session_df_list = list()
+    course_dir = file.path(input_dir, course)
+    for (session in list.dirs(course_dir, full.names = FALSE, recursive = FALSE)){
+        session_df = read_session_data(course, session)
+        session_df_list[[session]] <- session_df
+    }
+    course_df <- dplyr::bind_rows(session_df_list)
+
 
 }
 
@@ -92,7 +102,7 @@ build_models <- function(course, session, data_dir, model_type = NULL){
     fitControl <- trainControl(method = "repeatedcv", number = 2, repeats = 5, summaryFunction=twoClassSummary, classProbs=T, savePredictions = T, returnResamp = "all", seeds =  seed_list)
 
     # read data and drop near-zero variance columns; this creates a common baseline dataset for each method
-    data = read_course_data(data_dir, WEEK)
+    data = read_course_data(course)
     mod_data = data[,-caret::nearZeroVar(data, freqCut = 1000/1, uniqueCut = 2)]
     zero_var_mod_data = data[,-caret::checkConditionalX(data[,-ncol(data)], data[,ncol(data)])]
     # build model
