@@ -3,8 +3,6 @@ library(optparse, quietly = TRUE, warn.conflicts = FALSE)
 option_list = list(
     make_option(c("-c", "--course"), type="character", default=NULL, 
                 help="course", metavar="character"),
-    make_option(c("-s", "--session"), type="character", default=NULL,
-                help="3-digit session number", metavar="character"),
     make_option(c("-w", "--working_dir"), type="character", default=NULL,
                 help="current working dir", metavar="character"),
     make_option(c("-o", "--output_dir"), type="character", default=NULL,
@@ -17,13 +15,12 @@ opt_parser = OptionParser(option_list=option_list)
 opt = parse_args(opt_parser)
 
 course = opt$course
-session = opt$session
 working_dir = opt$working_dir
 output_dir = opt$output_dir
 mt = opt$model_type
 
 setwd(working_dir)
 source("modeling/modeling_utils.R")
-mod = build_models(course, session, working_dir, model_type = mt)
+mod = build_models(course, working_dir, model_type = mt)
 # save mod to file
 save(mod, file = file.path(output_dir, "model.Rdata"))
