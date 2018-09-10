@@ -1,32 +1,33 @@
 # functions for building models
 library(dplyr)
 library(caret)
+library(glue)
+library(magrittr)
 
 WEEK=2 #todo: verify this is correct week number
 
-## read in dataframe and drop non-active students (those who have shown >=1 week of inactivity prior to target week)
+## read in data for every session of course
 ## para id_col_ix: positional index of id column; since naming can be inconsistent in feature extraction this is (re)set manually when reading in data.
-read_data <- function(dir, week, dropout_file = "/input/labels.csv", id_col_ix = 1, id_col_name = "userID", drop_cols = c("week", "dropout_current_week")){
-    dropout_df = read.csv(file.path(dir, dropout_file))
-    names(dropout_df)[id_col_ix] <- id_col_name
-    all_feat_types = c("clickstream", "forum", "quiz")
-    # read feature df
-    feat_filename = paste0("week_", week, "_", ft, "_appended_feats.csv")
-    feat_fp = file.path(dir, feat_filename)
-    feat_df = read.csv(feat_fp)
-    names(feat_df)[id_col_ix] <- id_col_name
+read_session_data <- function(course, session, input_dir = "/input", label_csv_suffix = "_labels", feature_csv_suffix = "_features", id_col_name = "userID", drop_cols = c("week", "dropout_current_week")){
+    course_session_dir = file.path(input_dir, course, session)
+    feature_filename = glue("{course}_{session}{feature_csv_suffix}.csv")
+    label_filename = glue("{course}_{session}{label_csv_suffix}.csv")
+    feature_fp = file.path(course_session_dir, feature_filename)
+    label_fp = file.path(course_session_dir, label_filename)
+    feature_df = read.csv(feature_fp)
+    label_df = read.csv(label_fp)
     # join with dropout_df to get labels; 
-    active_feat_df = inner_join(feat_df, dropout_df, by = id_col_name) 
-    # set row names and drop any unneeded column; this includes dropping "dropout_current_week" so that label can be generated and dropping "week" column
-    row.names(active_feat_df) <- active_feat_df[,id_col_name]
-    suppressWarnings(active_feat_df <- dplyr::select(active_feat_df, -one_of(c(id_col_name, drop_cols)))) # suppress warnings about column names not in data
-    # drop any students who have shown >=1 week of inactivity prior to this week
-    active_feat_df = filter(active_feat_df, dropout_week > week - 1)
-    #todo: arent we only predicting final dropout in MORF? different task...and no need to create this label if so
-    active_feat_df$dropout_current_week = factor(active_feat_df$dropout_week == week, labels = "dropout")
-    # drop dropout_week column
-    active_feat_df = dplyr::select(active_feat_df, -one_of("dropout_week"))
-    return(active_feat_df)
+    feature_label_df = inner_join(feature_df, label_df, by = id_col_name)
+    suppressWarnings(feature_label_df <- dplyr::select(feature_label_df, -one_of(c(id_col_name, drop_cols)))) # suppress warnings about column names not in data
+    feature_label_df %<>%
+        dplyr::mutate(label_value = factor(label_value)) %>%
+        dplyr::rename(label = label_value)
+    return(feature_label_df)
+}
+
+read_course_data <- function() {
+    # todo: iteratively call read_session_data; concatenate and return results
+
 }
 
 ## create a blank resample df identical to those produced by R for when training fails; this helps differentiate between "bad features" (cases where model training fails because of data problems) and bad models (cases where the modeling process itself fails but data is otherwise ok)
@@ -91,7 +92,7 @@ build_models <- function(course, session, data_dir, model_type = NULL){
     fitControl <- trainControl(method = "repeatedcv", number = 2, repeats = 5, summaryFunction=twoClassSummary, classProbs=T, savePredictions = T, returnResamp = "all", seeds =  seed_list)
 
     # read data and drop near-zero variance columns; this creates a common baseline dataset for each method
-    data = read_data(data_dir, WEEK)
+    data = read_course_data(data_dir, WEEK)
     mod_data = data[,-caret::nearZeroVar(data, freqCut = 1000/1, uniqueCut = 2)]
     zero_var_mod_data = data[,-caret::checkConditionalX(data[,-ncol(data)], data[,ncol(data)])]
     # build model
