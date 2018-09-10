@@ -28,7 +28,7 @@ read_session_data <- function(course, session, input_dir = "/input", label_csv_s
 }
 
 read_course_data <- function(course, input_dir = "/input") {
-    # todo: iteratively call read_session_data; concatenate and return results
+    # iteratively call read_session_data; concatenate and return results
     session_df_list = list()
     course_dir = file.path(input_dir, course)
     for (session in list.dirs(course_dir, full.names = FALSE, recursive = FALSE)){
@@ -36,8 +36,7 @@ read_course_data <- function(course, input_dir = "/input") {
         session_df_list[[session]] <- session_df
     }
     course_df <- dplyr::bind_rows(session_df_list)
-
-
+    return(course_df)
 }
 
 ## create a blank resample df identical to those produced by R for when training fails; this helps differentiate between "bad features" (cases where model training fails because of data problems) and bad models (cases where the modeling process itself fails but data is otherwise ok)
@@ -93,7 +92,7 @@ missing_data_message <- function(course, session, ft, mt){
 }
 
 ## train model(s) of model_type and dump fold-level results to output_dir
-build_models <- function(course, session, data_dir, model_type = NULL){
+build_models <- function(course, data_dir, model_type = NULL){
     # create seeds; need to be a list of length 11 with 10 integer vectors of size 6 and the last list element having at least a single integer
     d <- seq(from=5000, to=5061)
     max <- 6
@@ -102,7 +101,7 @@ build_models <- function(course, session, data_dir, model_type = NULL){
     fitControl <- trainControl(method = "repeatedcv", number = 2, repeats = 5, summaryFunction=twoClassSummary, classProbs=T, savePredictions = T, returnResamp = "all", seeds =  seed_list)
 
     # read data and drop near-zero variance columns; this creates a common baseline dataset for each method
-    data = read_course_data(course)
+    data = read_course_data(course, input_dir = data_dir)
     mod_data = data[,-caret::nearZeroVar(data, freqCut = 1000/1, uniqueCut = 2)]
     zero_var_mod_data = data[,-caret::checkConditionalX(data[,-ncol(data)], data[,ncol(data)])]
     # build model
