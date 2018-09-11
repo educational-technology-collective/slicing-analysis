@@ -7,9 +7,7 @@ option_list = list(
     make_option(c("-i", "--input_dir"), type="character", default=NULL,
                 help="current working dir", metavar="character"),
     make_option(c("-o", "--output_dir"), type="character", default=NULL,
-                help="output dir", metavar="character"),
-    # make_option(c("-m", "--model_type"), type="character", default=NULL,
-    #             help="model type", metavar="character")
+                help="output dir", metavar="character")
 )
 
 opt_parser = OptionParser(option_list=option_list)
@@ -27,5 +25,5 @@ df_out <- raw_preds %>% tibble::rownames_to_column(var = "userID") %>%
     dplyr::mutate(pred = as.numeric(dropout > 0.5)) %>% # predict 1 if dropout probability > 0.5, otherwise zero
     dplyr::rename(prob = dropout) %>% # rename "dropout probability" column to simply prob; this matches column naming convention in MORF
     dplyr::select(c("userID", "prob", "pred")) # select to ensure columns in correct order
-write.csv(file.path(output_dir, "predictions.csv"), row.names = FALSE, col.names = TRUE)    
+write.csv(df_out, file = file.path(output_dir, "predictions.csv"), row.names = FALSE)    
 
