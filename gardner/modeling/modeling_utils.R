@@ -11,23 +11,29 @@ WEEK=2 #todo: verify this is correct week number
 read_session_data <- function(course, session, input_dir = "/input", label_csv_suffix = "_labels", feature_csv_suffix = "_features", id_col_name = "userID", drop_cols = c("week", "dropout_current_week")){
     course_session_dir = file.path(input_dir, course, session)
     feature_filename = glue("{course}_{session}{feature_csv_suffix}.csv")
-    label_filename = glue("{course}_{session}{label_csv_suffix}.csv")
     feature_fp = file.path(course_session_dir, feature_filename)
-    label_fp = file.path(course_session_dir, label_filename)
     feature_df = read.csv(feature_fp)
-    label_df = read.csv(label_fp)
-    # join with dropout_df to get labels; set user_id_col to rowname
-    feature_label_df = inner_join(feature_df, label_df, by = id_col_name)
-    message("[INFO] setting userID to row name and dropping userID column...")
-    feature_label_df %<>%
-        dplyr::mutate(label_value = factor(label_value, labels = c("non_dropout", "dropout"))) %>%
-        dplyr::rename(label = label_value) %>%
-        tibble::column_to_rownames(var = "userID") %>%
-        dplyr::select(-one_of(c(id_col_name, drop_cols)))
-    return(feature_label_df)
+    if (testdata != TRUE){
+        label_filename = glue("{course}_{session}{label_csv_suffix}.csv")
+        label_fp = file.path(course_session_dir, label_filename)
+        label_df = read.csv(label_fp)
+        # join with dropout_df to get labels; set user_id_col to rowname
+        feature_label_df = inner_join(feature_df, label_df, by = id_col_name)
+        message("[INFO] setting userID to row name and dropping userID column...")
+        feature_label_df %<>%
+            dplyr::mutate(label_value = factor(label_value, labels = c("non_dropout", "dropout"))) %>%
+            dplyr::rename(label = label_value) %>%
+            tibble::column_to_rownames(var = "userID") %>%
+            dplyr::select(-one_of(c(id_col_name, drop_cols)))
+        return(feature_label_df)
+    } else{
+        return(feature_df)
+    }
 }
 
-read_course_data <- function(course, input_dir = "/input") {
+
+## if testdata == TRUE, only reads feature data (no labels); otherwise labels and features are both expected
+read_course_data <- function(course, input_dir = "/input", testdata = FALSE) {
     # iteratively call read_session_data; concatenate and return results
     session_df_list = list()
     course_dir = file.path(input_dir, course)
