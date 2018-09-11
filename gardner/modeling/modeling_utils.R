@@ -8,7 +8,7 @@ WEEK=2 #todo: verify this is correct week number
 
 ## read in data for every session of course
 ## para id_col_ix: positional index of id column; since naming can be inconsistent in feature extraction this is (re)set manually when reading in data.
-read_session_data <- function(course, session, input_dir = "/input", label_csv_suffix = "_labels", feature_csv_suffix = "_features", id_col_name = "userID", drop_cols = c("week", "dropout_current_week")){
+read_session_data <- function(course, session, testdata, input_dir = "/input", label_csv_suffix = "_labels", feature_csv_suffix = "_features", id_col_name = "userID", drop_cols = c("week", "dropout_current_week")){
     course_session_dir = file.path(input_dir, course, session)
     feature_filename = glue("{course}_{session}{feature_csv_suffix}.csv")
     feature_fp = file.path(course_session_dir, feature_filename)
@@ -38,7 +38,7 @@ read_course_data <- function(course, input_dir = "/input", testdata = FALSE) {
     session_df_list = list()
     course_dir = file.path(input_dir, course)
     for (session in list.dirs(course_dir, full.names = FALSE, recursive = FALSE)){
-        session_df = read_session_data(course, session)
+        session_df = read_session_data(course, session, testdata)
         session_df_list[[session]] <- session_df
     }
     course_df <- dplyr::bind_rows(session_df_list)
