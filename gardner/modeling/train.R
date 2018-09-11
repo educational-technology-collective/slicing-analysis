@@ -1,3 +1,4 @@
+# trains and saves a model to replicate Gardner and Brooks (2018)
 # read command line argument for input data path; see https://www.r-bloggers.com/passing-arguments-to-an-r-script-from-command-lines/
 library(optparse, quietly = TRUE, warn.conflicts = FALSE)
 option_list = list(
