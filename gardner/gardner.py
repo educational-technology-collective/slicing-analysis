@@ -25,9 +25,7 @@ if __name__ == "__main__":
         cmd = "Rscript modeling/train.R --course {} --input_dir /input --output_dir /output --model_type {}".format(args.course, args.model_type)
         subprocess.call(cmd, shell=True)
     elif args.mode == "test":
-        #todo
-        pass
-
-
-
+        cmd = "Rscript modeling/test.R --course {} --input_dir /input --output_dir /output".format(
+            args.course, args.model_type)
+        subprocess.call(cmd, shell=True)
 
