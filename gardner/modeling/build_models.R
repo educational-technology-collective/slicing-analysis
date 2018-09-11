@@ -19,7 +19,6 @@ input_dir = opt$input_dir
 output_dir = opt$output_dir
 mt = opt$model_type
 
-setwd(working_dir)
 source("modeling/modeling_utils.R")
 mod = build_model(course, input_dir, model_type = mt)
 # save mod to file
