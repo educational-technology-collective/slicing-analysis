@@ -75,7 +75,9 @@ build_model <- function(course, data_dir, model_type = NULL){
     x <- seq_along(d)
     seed_list = split(d, ceiling(x/max))
     fitControl <- trainControl(method = "repeatedcv", number = 2, repeats = 5, summaryFunction=twoClassSummary, classProbs=T, savePredictions = T, returnResamp = "all", seeds =  seed_list)
-
+    # best parameters for various models; instead of tuning these are used directly
+    RPART_PARAMS = data.frame(cp = 0.001)
+    ADABOOST_PARAMS = data.frame(nIter = 50, method = "Adaboost.M1")
     # read data and drop near-zero variance columns; this creates a common baseline dataset for each method
     data = read_course_data(course, input_dir = data_dir)
     mod_data = data[,-caret::nearZeroVar(data, freqCut = 1000/1, uniqueCut = 2)]
@@ -103,21 +105,20 @@ build_model <- function(course, data_dir, model_type = NULL){
         }
     }
     if (model_type == "rpart"){ # simple classification tree; don't use C4.5/J48 because these require java.
-        # https://stackoverflow.com/questions/31138751/roc-curve-from-training-data-in-caret to plot AUC
-        rpartGrid = expand.grid(cp = c(0.001, 0.01, 0.1, 1))
+        #rpartGrid = expand.grid(cp = c(0.001, 0.01, 0.1, 1))
         model_training_message(course, model_type)
         if (is.data.frame(mod_data)){
-            mod = caret::train(label ~ ., data = mod_data, method = model_type, metric = "ROC", trControl = fitControl, tuneGrid = rpartGrid)
+            mod = caret::train(label ~ ., data = mod_data, method = model_type, metric = "ROC", trControl = fitControl, tuneGrid = RPART_PARAMS)
         } else{
             missing_data_message(course, session, model_type)
             mod = NULL
         }
     }
     if (model_type == "adaboost"){ # adaboost; chose not to use random forest because tuning the mtry parameter across datasets with highly-varying numbers of predictors was not practical
-        adaGrid = expand.grid(nIter = c(50, 100, 500), method = c("Adaboost.M1", "Real adaboost"))
+        # adaGrid = expand.grid(nIter = c(50, 100, 500), method = c("Adaboost.M1", "Real adaboost"))
         model_training_message(course, model_type)
         if (is.data.frame(mod_data)){
-            mod = caret::train(label ~ ., data = mod_data, method = model_type, metric = "ROC", trControl = fitControl, tuneGrid = adaGrid)
+            mod = caret::train(label ~ ., data = mod_data, method = model_type, metric = "ROC", trControl = fitControl, tuneGrid = ADABOOST_PARAMS)
         } else {
             missing_data_message(course, session, model_type)
             mod = NULL
