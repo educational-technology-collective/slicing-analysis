@@ -20,7 +20,7 @@ read_session_data <- function(course, session, input_dir = "/input", label_csv_s
     feature_label_df = inner_join(feature_df, label_df, by = id_col_name)
     message("[INFO] setting userID to row name and dropping userID column...")
     feature_label_df %<>%
-        dplyr::mutate(label_value = factor(label_value)) %>%
+        dplyr::mutate(label_value = factor(label_value, labels = c("non_dropout", "dropout"))) %>%
         dplyr::rename(label = label_value) %>%
         tibble::column_to_rownames(var = "userID") %>%
         dplyr::select(-one_of(c(id_col_name, drop_cols)))
@@ -51,8 +51,8 @@ initialize_blank_resample_df <- function(model_type, n_reps = 5, n_folds = 2, da
     return(df)
 }
 
-model_training_message <- function(course, session, mt){
-    msg = paste("[INFO] training", mt, "model for course", course, "session", session, sep = " ")
+model_training_message <- function(course, mt){
+    msg = paste("[INFO] training", mt, "model for course", course, sep = " ")
     message(msg)
 }
 
@@ -62,7 +62,7 @@ missing_data_message <- function(course, session, mt){
 }
 
 ## train model(s) of model_type and dump fold-level results to output_dir
-build_models <- function(course, data_dir, model_type = NULL){
+build_model <- function(course, data_dir, model_type = NULL){
     # create seeds; need to be a list of length 11 with 10 integer vectors of size 6 and the last list element having at least a single integer
     d <- seq(from=5000, to=5061)
     max <- 6
@@ -77,9 +77,9 @@ build_models <- function(course, data_dir, model_type = NULL){
     # build model
     if (model_type == "glmnet"){ # penalized logistic regression
         glmGrid = expand.grid(alpha=0, lambda = c(10^c(0, -1, -2, -3), 0))
-        model_training_message(course, session, model_type)
+        model_training_message(course, model_type)
         if (is.data.frame(mod_data)){
-            mod = caret::train(dropout_current_week ~ ., data = mod_data, method = model_type, metric = "ROC", trControl = fitControl, tuneGrid = glmGrid)
+            mod = caret::train(label ~ ., data = mod_data, method = model_type, metric = "ROC", trControl = fitControl, tuneGrid = glmGrid)
         } else{
             missing_data_message(course, session, model_type)
             mod = NULL
@@ -87,10 +87,10 @@ build_models <- function(course, data_dir, model_type = NULL){
     }
     if (model_type == "svmLinear2"){ # linear svm; need to do some feature selection
         svmGrid = expand.grid(cost = 10^c(1, 0, -1, -2, -3))
-        model_training_message(course, session, model_type)
+        model_training_message(course, model_type)
         library(doMC);registerDoMC()
         if (is.data.frame(mod_data)){
-            mod = caret::train(dropout_current_week ~ ., data = zero_var_mod_data, method = model_type, metric = "ROC", trControl = fitControl, tuneGrid = svmGrid, preProc = c("center", "scale"))
+            mod = caret::train(label ~ ., data = zero_var_mod_data, method = model_type, metric = "ROC", trControl = fitControl, tuneGrid = svmGrid, preProc = c("center", "scale"))
         } else{
             missing_data_message(course, session, model_type)
             mod = NULL
@@ -99,9 +99,9 @@ build_models <- function(course, data_dir, model_type = NULL){
     if (model_type == "rpart"){ # simple classification tree; don't use C4.5/J48 because these require java.
         # https://stackoverflow.com/questions/31138751/roc-curve-from-training-data-in-caret to plot AUC
         rpartGrid = expand.grid(cp = c(0.001, 0.01, 0.1, 1))
-        model_training_message(course, session, model_type)
+        model_training_message(course, model_type)
         if (is.data.frame(mod_data)){
-            mod = caret::train(dropout_current_week ~ ., data = mod_data, method = model_type, metric = "ROC", trControl = fitControl, tuneGrid = rpartGrid)
+            mod = caret::train(label ~ ., data = mod_data, method = model_type, metric = "ROC", trControl = fitControl, tuneGrid = rpartGrid)
         } else{
             missing_data_message(course, session, model_type)
             mod = NULL
@@ -109,9 +109,9 @@ build_models <- function(course, data_dir, model_type = NULL){
     }
     if (model_type == "adaboost"){ # adaboost; chose not to use random forest because tuning the mtry parameter across datasets with highly-varying numbers of predictors was not practical
         adaGrid = expand.grid(nIter = c(50, 100, 500), method = c("Adaboost.M1", "Real adaboost"))
-        model_training_message(course, session, model_type)
+        model_training_message(course, model_type)
         if (is.data.frame(mod_data)){
-            mod = caret::train(dropout_current_week ~ ., data = mod_data, method = model_type, metric = "ROC", trControl = fitControl, tuneGrid = adaGrid)
+            mod = caret::train(label ~ ., data = mod_data, method = model_type, metric = "ROC", trControl = fitControl, tuneGrid = adaGrid)
         } else {
             missing_data_message(course, session, model_type)
             mod = NULL
@@ -119,9 +119,9 @@ build_models <- function(course, data_dir, model_type = NULL){
     }
     if (model_type == "nb"){ # naive bayes; remove any predictors with empty conditional distributions within each level of outcome variable
         nbGrid = expand.grid(fL = c(0,1), usekernel = c(T,F), adjust = c(1)) # note that only the laplacian smoothing parameter and use of kernel is tuned; adjust is set to default value.
-        model_training_message(course, session, model_type)
+        model_training_message(course, model_type)
         if (is.data.frame(mod_data)){
-            mod = caret::train(dropout_current_week ~ ., data = zero_var_mod_data, method = "nb", metric = "ROC", trControl = fitControl, tuneGrid = nbGrid)
+            mod = caret::train(label ~ ., data = zero_var_mod_data, method = "nb", metric = "ROC", trControl = fitControl, tuneGrid = nbGrid)
         }
         else{
             missing_data_message(course, session, model_type)
