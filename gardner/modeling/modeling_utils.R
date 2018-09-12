@@ -4,8 +4,6 @@ library(caret)
 library(glue)
 library(magrittr)
 
-WEEK=2 #todo: verify this is correct week number
-
 ## read in data for every session of course
 ## para id_col_ix: positional index of id column; since naming can be inconsistent in feature extraction this is (re)set manually when reading in data.
 read_session_data <- function(course, session, testdata, input_dir = "/input", label_csv_suffix = "_labels", feature_csv_suffix = "_features", id_col_name = "userID", drop_cols = c("week", "dropout_current_week")){
@@ -17,16 +15,24 @@ read_session_data <- function(course, session, testdata, input_dir = "/input", l
         label_filename = glue("{course}_{session}{label_csv_suffix}.csv")
         label_fp = file.path(course_session_dir, label_filename)
         label_df = read.csv(label_fp)
-        # join with dropout_df to get labels; set user_id_col to rowname
-        feature_label_df = inner_join(feature_df, label_df, by = id_col_name)
-        message("[INFO] setting userID to row name and dropping userID column...")
-        feature_label_df %<>%
-            dplyr::mutate(label_value = factor(label_value, labels = c("non_dropout", "dropout"))) %>%
-            dplyr::rename(label = label_value) %>%
-            tibble::column_to_rownames(var = "userID") %>%
-            dplyr::select(-one_of(c(id_col_name, drop_cols)))
-        return(feature_label_df)
+        if (dim(feature_df)[1] > 0 && dim(label_df)[1] > 0){
+            # checks dimensions of features and labels; throw warning if either dataframe is empty
+            # join with dropout_df to get labels; set user_id_col to rowname
+            feature_label_df = inner_join(feature_df, label_df, by = id_col_name)
+            message("[INFO] setting userID to row name and dropping userID column...")
+            feature_label_df %<>%
+                dplyr::mutate(label_value = factor(label_value, labels = c("non_dropout", "dropout"))) %>%
+                dplyr::rename(label = label_value) %>%
+                tibble::column_to_rownames(var = "userID") %>%
+                dplyr::select(-one_of(c(id_col_name, drop_cols)))
+            return(feature_label_df)
+        } else {
+            ## this block is reached if feat_df or label_df have zero rows
+            message(glue::glue("[WARNING] zero observations for features or labels in course {course} session {session}"))
+            return(NULL)
+        }
     } else{
+        ## test data; no labels to be merged
         return(feature_df)
     }
 }
@@ -38,6 +44,7 @@ read_course_data <- function(course, input_dir = "/input", testdata = FALSE) {
     session_df_list = list()
     course_dir = file.path(input_dir, course)
     for (session in list.dirs(course_dir, full.names = FALSE, recursive = FALSE)){
+        message(session)
         session_df = read_session_data(course, session, testdata)
         session_df_list[[session]] <- session_df
     }
