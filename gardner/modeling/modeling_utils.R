@@ -1,8 +1,8 @@
 # functions for building models
-library(dplyr)
-library(caret)
-library(glue)
-library(magrittr)
+library(dplyr, quietly = TRUE, warn.conflicts = FALSE)
+library(caret, quietly = TRUE, warn.conflicts = FALSE)
+library(glue, quietly = TRUE, warn.conflicts = FALSE)
+library(magrittr, quietly = TRUE, warn.conflicts = FALSE)
 
 ## read in data for every session of course
 ## para id_col_ix: positional index of id column; since naming can be inconsistent in feature extraction this is (re)set manually when reading in data.
