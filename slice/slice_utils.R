@@ -1,10 +1,10 @@
 # utility functions for conducting slicing analysis
 # in future, these functions should be directly incoroporated into auctestr package
 
-library(ROCR)
-library(magrittr)
-library(dplyr)
-library(glue)
+library(ROCR, quietly = TRUE)
+library(magrittr, quietly = TRUE)
+library(dplyr, quietly = TRUE)
+library(glue, quietly = TRUE)
 
 
 ## preds: vector of predicted probability
