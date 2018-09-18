@@ -56,7 +56,9 @@ RUN \
    R -e "install.packages(c('broom', 'tibble', 'ipred', 'dimRed', 'lubridate', 'timeDate', 'ddalpha', 'gower', 'RcppRoll', 'pls'), repos = c('http://cran.rstudio.com/','http://cran.us.r-project.org'), dependencies = c('Depends'))" && \
    R -e "install.packages(c('data.table', 'iterators'), repos = c('http://cran.rstudio.com/','http://cran.us.r-project.org'), dependencies = c('Depends'))" && \
   R -e "install.packages(c('foreach', 'ModelMetrics', 'reshape2', 'recipes'), repos = c('http://cran.rstudio.com/','http://cran.us.r-project.org'), dependencies = c('Depends'))" && \
-  R -e "install.packages('caret', repos = c('http://cran.rstudio.com/','http://cran.us.r-project.org'), dependencies = c('Depends'))"
+  R -e "install.packages('caret', repos = c('http://cran.rstudio.com/','http://cran.us.r-project.org'), dependencies = c('Depends'))" && \
+  R -e "install.packages('fastAdaboost', repos = c('http://cran.rstudio.com/','http://cran.us.r-project.org'), dependencies = c('Depends'))"
+
 
 # add scripts
 ADD extraction extraction
