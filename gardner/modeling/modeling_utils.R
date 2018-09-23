@@ -85,6 +85,7 @@ build_model <- function(course, data_dir, model_type = NULL){
     # best parameters for various models; instead of tuning these are used directly
     RPART_PARAMS = data.frame(cp = 0.001)
     ADABOOST_PARAMS = data.frame(nIter = 50, method = "Adaboost.M1")
+    NB_PARAMS = data.frame(fL = 1, usekernel = FALSE, adjust = 1)
     # read data and drop near-zero variance columns; this creates a common baseline dataset for each method
     data = read_course_data(course, input_dir = data_dir)
     mod_data = data[,-caret::nearZeroVar(data, freqCut = 1000/1, uniqueCut = 2)]
@@ -132,10 +133,10 @@ build_model <- function(course, data_dir, model_type = NULL){
         }
     }
     if (model_type == "nb"){ # naive bayes; remove any predictors with empty conditional distributions within each level of outcome variable
-        nbGrid = expand.grid(fL = c(0,1), usekernel = c(T,F), adjust = c(1)) # note that only the laplacian smoothing parameter and use of kernel is tuned; adjust is set to default value.
+        # nbGrid = expand.grid(fL = c(0,1), usekernel = c(T,F), adjust = c(1)) # note that only the laplacian smoothing parameter and use of kernel is tuned; adjust is set to default value.
         model_training_message(course, model_type)
         if (is.data.frame(mod_data)){
-            mod = caret::train(label ~ ., data = zero_var_mod_data, method = "nb", metric = "ROC", trControl = fitControl, tuneGrid = nbGrid)
+            mod = caret::train(label ~ ., data = zero_var_mod_data, method = "nb", metric = "ROC", trControl = fitControl, tuneGrid = NB_PARAMS)
         }
         else{
             missing_data_message(course, session, model_type)
