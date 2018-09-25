@@ -74,7 +74,7 @@ def aggregate_and_remove_feature_files(input_dir, output_dir="/output", result_f
                     df_list.append(df)
                     os.remove(fp)
                 except Exception as e:
-                    print("[ERROR] {}".format(e))
+                    print("[ERROR] in feature file aggregation {}".format(e))
     # rename columns as necessary, from https://stackoverflow.com/questions/37221147/how-do-i-apply-transformations-to-list-of-pandas-dataframes
     for i in range(len(df_list)):
         # drop columns in drop_cols
