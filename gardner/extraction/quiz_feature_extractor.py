@@ -58,7 +58,10 @@ def read_quiz_data(dir, run):
     :return: pd.DataFrame of quiz data for run.
     """
     quiz_file =  [x for x in os.listdir(dir) if x.endswith('{0}_quiz.csv'.format(run))][0]
-    quiz_df = pd.read_csv(os.path.join(dir, quiz_file))
+    try:
+        quiz_df = pd.read_csv(os.path.join(dir, quiz_file))
+    except Exception as e:
+        print("[ERROR] reading quiz data from file {}: {}".format(quiz_file, e))
     return quiz_df
 
 
@@ -70,7 +73,10 @@ def read_quiz_metadata(dir, run):
     :return: pd.DataFrame of quiz metadata for run.
     """
     quiz_meta_file =  [x for x in os.listdir(dir) if x.endswith('{0}_quiz_metadata.csv'.format(run))][0]
-    quiz_meta_df = pd.read_csv(os.path.join(dir, quiz_meta_file))
+    try:
+        quiz_meta_df = pd.read_csv(os.path.join(dir, quiz_meta_file))
+    except Exception as e:
+        print("[ERROR] reading quiz metadata from file {}: {}".format(quiz_file, e))
     return quiz_meta_df
 
 
@@ -84,7 +90,10 @@ def get_users_and_weeks(df, dropout_fp, df_user_col = 'session_user_id', dropout
     :param week_col: name of column containing weeks.
     :return: series containing all unique session_user_ids in df, and zero-indexed list of all week numbers in course as integers.
     """
-    dropout_df = pd.read_csv(dropout_fp)
+    try:
+        dropout_df = pd.read_csv(dropout_fp)
+    except Exception as e:
+        print("[ERROR] reading dropout_df from {}: {}".format(dropout_fp, e))
     users = dropout_df[dropout_user_col].unique()
     weeks = [x for x in range(int(max(df[week_col].dropna().unique())) + 1)]
     return users,weeks
