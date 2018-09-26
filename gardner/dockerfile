@@ -58,6 +58,18 @@ RUN \
   R -e "install.packages(c('foreach', 'ModelMetrics', 'reshape2', 'recipes'), repos = c('http://cran.rstudio.com/','http://cran.us.r-project.org'), dependencies = c('Depends'))" && \
   R -e "install.packages('caret', repos = c('http://cran.rstudio.com/','http://cran.us.r-project.org'), dependencies = c('Depends'))" && \
   R -e "install.packages('fastAdaboost', repos = c('http://cran.rstudio.com/','http://cran.us.r-project.org'), dependencies = c('Depends'))"
+# even even more r packages
+RUN \
+  R -e "install.packages(c('forcats', 'hms', 'readr'), repos = c('http://cran.rstudio.com/','http://cran.us.r-project.org'), dependencies = c('Depends'))" && \
+  R -e "install.packages('haven', repos = c('http://cran.rstudio.com/','http://cran.us.r-project.org'), dependencies = c('Depends'))" && \
+  R -e "install.packages(c('httpuv', 'mime', 'jsonlite', 'xtable', 'sourcetools', 'later', 'promises'), repos = c('http://cran.rstudio.com/','http://cran.us.r-project.org'), dependencies = c('Depends'))" && \
+  R -e "install.packages('e1071', repos = c('http://cran.rstudio.com/','http://cran.us.r-project.org'), dependencies = c('Depends'))" && \
+  R -e "install.packages('htmltools', repos = c('http://cran.rstudio.com/','http://cran.us.r-project.org'), dependencies = c('Depends'))" && \
+  R -e "install.packages('shiny', repos = c('http://cran.rstudio.com/','http://cran.us.r-project.org'), dependencies = c('Depends'))" && \
+  R -e "install.packages(c('miniUI', 'rstudioapi', 'highr', 'classInt', 'labelled'), repos = c('http://cran.rstudio.com/','http://cran.us.r-project.org'), dependencies = c('Depends'))" && \  
+  R -e "install.packages('questionr', repos = c('http://cran.rstudio.com/','http://cran.us.r-project.org'), dependencies = c('Depends'))" && \
+  R -e "install.packages('combinat', repos = c('http://cran.rstudio.com/','http://cran.us.r-project.org'), dependencies = c('Depends'))" && \
+  R -e "install.packages('klaR', repos = c('http://cran.rstudio.com/','http://cran.us.r-project.org'), dependencies = c('Depends'))"
 
 
 # add scripts
