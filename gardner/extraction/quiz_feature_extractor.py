@@ -234,9 +234,9 @@ def gen_quiz_features(quiz_df, quiz_meta_df, course_start, course_end, quiz_type
     quiz_meta_df['assignment_week'] = (quiz_meta_df['soft_close_time']*1000).apply(timestamp_week, args = (course_start, course_end))
     quiz_df['pre_dl_submission_time'] = quiz_df['soft_close_time'] - quiz_df['submission_time']
     # drop submissions outside of course window
+    users, weeks = get_users_and_weeks(quiz_df, dropout_fp)
     quiz_df = quiz_df[pd.notnull(quiz_df["submission_week"]) & pd.notnull(quiz_df["assignment_week"])]
     # fetch users and weeks from df
-    users, weeks = get_users_and_weeks(quiz_df, dropout_fp)
     # create dataframe of users and weeks; this is user-week level dataframe for output.
     df_out = gen_user_week_df(users, weeks)
     # compute feature: average pre_dl_submission_time by user/week
