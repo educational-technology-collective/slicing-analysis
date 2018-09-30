@@ -16,6 +16,15 @@ compute_roc <- function(preds, labs){
     return(perf)
 }
 
+## preds: vector of predicted probabilities
+## labs: vector of labels
+compute_auc <- function(preds, labs){
+    predobj <- ROCR::prediction(preds, labs)
+    aucobj <- ROCR::performance(predobj, measure = "auc")
+    auc <- aucobj@y.values[[1]]
+    return(auc)
+}
+
 ## use interpolation to make approximate curve along n_grid equally-spaced values
 interpolate_roc_fun <- function(perf_in, n_grid = 10000){
     x_vals = unlist(perf_in@x.values)
