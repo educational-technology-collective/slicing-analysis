@@ -3,6 +3,7 @@ library(magrittr)
 library(gmodels)
 library(ggplot2)
 library(ggthemes)
+library(ggrepel)
 
 
 lr <- read.csv("/Users/joshgardner/Documents/Github/slicing-analysis/img/fei-lr/slice_results.csv")
@@ -12,6 +13,7 @@ cart <- read.csv("/Users/joshgardner/Documents/Github/slicing-analysis/img/gardn
 nb <- read.csv("/Users/joshgardner/Documents/Github/slicing-analysis/img/gardner-nb/slice_results.csv")
 
 color_scheme = c("#a6cee3", "#1f78b4", "#b2df8a", "#33a02c")
+fy_models = c("Logistic Regression", "LSTM", "SVM") # used for statistical testing of FY vs. Gardner models
 output_dir = "/Users/joshgardner/Documents/Github/slicing-analysis/img/slice_summary"
 
 df <- dplyr::bind_rows(list("Logistic Regression" = lr, "LSTM" = lstm, "SVM" = svm, "CART" = cart, "Naive Bayes" = nb), .id = "model")
@@ -23,7 +25,12 @@ course_cats$course = substr(course_cats$course, 1, nchar(course_cats$course)-4)
 course_cats %<>% 
     dplyr::select(c("course", "curricular_area")) %>% unique()
 
-df %<>% dplyr::inner_join(course_cats, by = c("Course" = "course"))
+curricular_area_desc_df <- data.frame("curricular_area" = c("CS", "GHSS", "HHRDE", "STEM"), 
+                                   "curricular_area_desc" = c("Computer Science", "Government, Health, and Social Science",
+                                                              "Humanities, History, Design, Religion, and Education",
+                                                              "Science, Technology, Engineering, and Mathematics"))
+
+df %<>% dplyr::inner_join(course_cats, by = c("Course" = "course")) %>% dplyr::left_join(curricular_area_desc_df, by = "curricular_area")
 df$model <- factor(df$model)
 df$Course <- factor(df$Course)
 df$curricular_area <- factor(df$curricular_area)
@@ -45,6 +52,9 @@ kruskal.test(df$Slice.Statistic, df$Course)
 # test for differences in subjects
 kruskal.test(df$Slice.Statistic, df$curricular_area)
 
+# test for differences by feature sets, FY 2015 models vs. Gardner 2018 models
+kruskal.test(df$Slice.Statistic, factor(df$model %in% fy_models))
+
 # simple linear regression model; evaluate association of ...
 ## course size
 summary(lm(Slice.Statistic ~ model + n, data = df))
@@ -57,7 +67,7 @@ summary(gender_linear)
 summary(gender_quadratic)
 anova(gender_linear, gender_quadratic)
 
-cor.test(df$Slice.Statistic, df$AUC)
+cor.test(df$Slice.Statistic, df$AUC, method = "pearson")
 
 ##################################
 ##### SUMMARY STATISTICS
@@ -126,7 +136,7 @@ ggsave(filename = file.path(output_dir, "abroca_summary_by_model.pdf"), device =
 
 ## compare by size and gender balance, single frame w/fitted quadratic lines
 
-labelInfo <-
+labelInfo <- #https://stackoverflow.com/questions/37995552/create-dynamic-labels-for-geom-smooth-lines/37996394#37996394
     split(df, df$model) %>%
     lapply(function(x){
         data.frame(
@@ -141,7 +151,7 @@ labelInfo$label <- forcats::lvls_revalue(levels(df$model), c("CART", "LR", "LSTM
 
 pub_plot_1 <-df %>%
     ggplot(aes(x = freq, y = Slice.Statistic)) + 
-    geom_point(aes(size = n, color = curricular_area)) + 
+    geom_point(aes(size = n, color = curricular_area_desc)) + 
     geom_smooth(aes(group = model), method = "lm", formula = y ~ poly(x, 2), color = "black", alpha = 0.05, size = 0.5) +
     theme_base() + 
     xlab("Gender Balance (% male)") +
@@ -149,12 +159,13 @@ pub_plot_1 <-df %>%
     scale_color_manual(values = color_scheme) +
     labs(color = "Curricular Area", size = "Course Size") + 
     theme(legend.position="bottom", 
-          legend.box = "vertical", 
+          legend.box = "horizontal", # update in other plot
           plot.background=element_blank(), # removes frame around plotting area
           plot.title = element_text(hjust = 0.5), 
           plot.subtitle = element_text(hjust = 0.5)
     ) + 
-    guides(colour = guide_legend(override.aes = list(size=5))) +
+    guides(colour = guide_legend(override.aes = list(size=5), nrow = 4, title.position = "top"), 
+           size = guide_legend(nrow = 4, title.position = "top")) + 
     xlim(0.4,0.875) + 
     geom_label_repel(data = labelInfo
                      , aes(x= max
@@ -209,7 +220,49 @@ df %>%
     facet_wrap(model ~ .)
 
 auc_abroca_cor = round(cor(df$Slice.Statistic, df$AUC), 3)
+
+#exploratory plot, lines by model
+lineLabelInfo <- #https://stackoverflow.com/questions/37995552/create-dynamic-labels-for-geom-smooth-lines/37996394#37996394
+    split(df, df$model) %>%
+    lapply(function(x){
+        data.frame(
+            predAtMax = lm(Slice.Statistic ~ AUC, data=x) %>%
+                predict(newdata = data.frame(AUC = max(x$AUC))), 
+            max = max(x$AUC)
+        )}) %>%
+    dplyr::bind_rows()
+lineLabelInfo$label = levels(df$model)
+lineLabelInfo$label <- forcats::lvls_revalue(levels(df$model), c("CART", "LR", "LSTM", "NB", "SVM"))
+
+
 pub_plot_2 <- df %>%
+    ggplot(aes(x = AUC, y = Slice.Statistic)) +
+    geom_point(aes(color = curricular_area, size = n)) +
+    scale_color_manual(values = color_scheme) +
+    geom_smooth(aes(group = model), method = "lm", color = "black", alpha = 0.1, size = 0.5) +
+    theme_base() + 
+    ylab("ABROCA") + 
+    xlab("AUC (Area Under Receiver Operating Characteristic Curve)") + 
+    labs(color = "Curricular Area", size = "Course Size") + 
+    geom_label_repel(data = lineLabelInfo
+                     , aes(x= max
+                           , y = predAtMax
+                           , label = label)) + 
+    theme(legend.position="bottom", 
+          legend.box = "horizontal",
+          plot.background=element_blank() # removes frame around plotting area
+    ) + 
+    guides(colour = guide_legend(override.aes = list(size=5), nrow = 4, title.position = "top"), 
+           size = guide_legend(nrow = 4, title.position = "top")) + 
+    ggtitle(label = "Performance - Unfairness Correlation", subtitle = glue::glue("Correlation = {auc_abroca_cor}")) + 
+    theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5))
+
+pub_plot_2
+ggsave(filename = file.path(output_dir, "abroca_vs_auc_lines.pdf"), device = "pdf", width = 7, height = 7)
+
+
+#same as second publication graphic, but no lines
+ df %>%
     ggplot(aes(x = AUC, y = Slice.Statistic, color = curricular_area, size = n)) +
     geom_point() +
     scale_color_manual(values = color_scheme) +
@@ -222,11 +275,12 @@ pub_plot_2 <- df %>%
           plot.background=element_blank() # removes frame around plotting area
           ) + 
     guides(colour = guide_legend(override.aes = list(size=5))) + 
-    ggtitle(label = "Performance - Unfairness Correlation, All Models", subtitle = glue::glue("AUC vs. ABROCA, Correlation = {auc_abroca_cor}")) + 
+    ggtitle(label = "Performance - Unfairness Correlation", subtitle = glue::glue("All Models Shown; Correlation = {auc_abroca_cor}")) + 
     theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5))
-pub_plot_2
-ggsave(filename = file.path(output_dir, "abroca_vs_auc.pdf"), device = "pdf", width = 7, height = 7)
+ggsave(filename = file.path(output_dir, "abroca_vs_auc_nolines.pdf"), device = "pdf", width = 7, height = 7)
 
-pub_plot <- gridExtra::grid.arrange(pub_plot_1 + guides(color = F, size = F), pub_plot_2, ncol=1)
-ggsave(filename = file.path(output_dir, "pub_plot_exploratory.pdf"), plot = pub_plot, device = "pdf", width = 8, height = 14)
+ggpubr::ggarrange(pub_plot_1 + theme(axis.title = element_text(size = rel(0.75))), 
+                  pub_plot_2 + theme(axis.title = element_text(size = rel(0.75))), 
+                  ncol = 1, nrow = 2, common.legend = T, legend = "bottom")
+ggsave(filename = file.path(output_dir, "pub_plot_exploratory.pdf"), device = "pdf", width = 7, height = 12)
 
